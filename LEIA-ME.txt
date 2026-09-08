@@ -1,0 +1,15 @@
+MAYA GARDEN PRO — COMO PUBLICAR (2 minutos)
+============================================
+1. Crie conta em https://github.com e clique em "New repository".
+   Nome sugerido: maya-garden | Deixe Public | Create repository.
+2. Clique em "uploading an existing file".
+3. Arraste TODA esta pasta (todos os arquivos e subpastas) para a página.
+   Inclua os itens ocultos: .github, .gitignore, .nojekyll
+   (no Explorer: Exibir > Mostrar > Itens ocultos).
+4. Clique em "Commit changes".
+5. Vá em Settings > Pages > "Build and deployment" > escolha "GitHub Actions".
+6. Em 1-2 minutos o endereço aparece na tela, tipo:
+   https://SEU-USUARIO.github.io/maya-garden/
+
+Funciona em Android, iPhone e computador, inclusive offline após a 1ª visita.
+Dúvidas? Fale com quem fez o sistema.

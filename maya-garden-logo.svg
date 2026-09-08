@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <rect width="400" height="400" fill="#ffffff"/>
+  <!-- ramo -->
+  <g stroke="#1A5D1A" stroke-width="5" stroke-linecap="round" fill="none">
+    <path d="M200 90 C 195 130, 190 160, 185 195"/>
+  </g>
+  <g fill="#2E7D32">
+    <ellipse cx="205" cy="105" rx="16" ry="8" transform="rotate(-25 205 105)"/>
+    <ellipse cx="215" cy="125" rx="16" ry="8" transform="rotate(-25 215 125)"/>
+    <ellipse cx="210" cy="145" rx="15" ry="7.5" transform="rotate(-25 210 145)"/>
+    <ellipse cx="192" cy="115" rx="14" ry="7" transform="rotate(25 192 115)"/>
+    <ellipse cx="188" cy="138" rx="14" ry="7" transform="rotate(25 188 138)"/>
+    <ellipse cx="185" cy="160" rx="13" ry="6.5" transform="rotate(25 185 160)"/>
+  </g>
+  <text x="200" y="270" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="72" letter-spacing="6" fill="#1B7A2B">MAYA</text>
+  <text x="200" y="330" text-anchor="middle" font-family="Brush Script MT, Segoe Script, cursive" font-size="64" fill="#111111">Garden</text>
+  <text x="200" y="365" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" letter-spacing="3" fill="#1A5D1A">JARDINAGEM • ORQUÍDEAS • PAISAGISMO</text>
+</svg>
