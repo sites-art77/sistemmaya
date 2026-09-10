@@ -1,4 +1,4 @@
-/* MAYA Garden — storage offline-first (localStorage) */
+/* MAYA Garden — cache de sessão (a fonte oficial é a nuvem) */
 const K = {
   settings: 'maya_settings_v1',
   catalog: 'maya_catalog_v1',
@@ -89,7 +89,13 @@ function load(key, fallback){
   }catch{ return structuredClone(fallback); }
 }
 function notifyStoreChanged(){ if(window.__mayaCloudMute) return; try{ window.dispatchEvent(new CustomEvent('maya-store-changed')); }catch(e){} }
-function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); notifyStoreChanged(); }
+function canPersist(){
+  if(window.__mayaAuthSyncing) return true;
+  if(window.MayaAuth && window.MayaAuth.authenticated===false) return false;
+  if(window.MayaAuth && typeof window.MayaAuth.canWrite==='function' && !window.MayaAuth.canWrite()) return false;
+  return true;
+}
+function save(key, val){ if(!canPersist()) return false; localStorage.setItem(key, JSON.stringify(val)); notifyStoreChanged(); return true; }
 
 const Store = {
   get settings(){ const s = load(K.settings, defaultSettings); if(s && /^assets\//.test(String(s.logoPath||''))) s.logoPath=String(s.logoPath).replace(/^assets\//,''); if(s && s.zapTemplate) s.zapTemplate = String(s.zapTemplate).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu,'').replace(/ {2,}/g,' '); return s; },
@@ -108,7 +114,7 @@ const Store = {
   set contracts(v){ save(K.contracts, v); },
   get os(){ return load(K.os, []); },
   set os(v){ save(K.os, v); },
-  nextOSNumber(){ let seq=parseInt(localStorage.getItem(K.osseq)||'0',10)+1; localStorage.setItem(K.osseq,String(seq)); const year=new Date().getFullYear(); return `OS-${year}-${String(seq).padStart(4,'0')}`; },
+  nextOSNumber(){ if(!canPersist()) return ''; let seq=parseInt(localStorage.getItem(K.osseq)||'0',10)+1; localStorage.setItem(K.osseq,String(seq)); const year=new Date().getFullYear(); return `OS-${year}-${String(seq).padStart(4,'0')}`; },
   get packages(){ const p = load(K.packages, defaultPackages); return Array.isArray(p)&&p.length?p:structuredClone(defaultPackages); },
   set packages(v){ save(K.packages, v); },
   exportBackup(){
@@ -145,12 +151,13 @@ const Store = {
     put(K.settings, d.settings); put(K.catalog, d.catalog); put(K.clients, d.clients);
     put(K.budgets, d.budgets); put(K.visits, d.visits); put(K.pricing, d.pricing);
     put(K.contracts, d.contracts); put(K.packages, d.packages); put(K.os, d.os);
-    if(/^\d+$/.test(String(d.seq||''))) localStorage.setItem(K.seq, String(d.seq));
-    if(/^\d+$/.test(String(d.osseq||''))) localStorage.setItem(K.osseq, String(d.osseq));
+    if(canPersist() && /^\d+$/.test(String(d.seq||''))) localStorage.setItem(K.seq, String(d.seq));
+    if(canPersist() && /^\d+$/.test(String(d.osseq||''))) localStorage.setItem(K.osseq, String(d.osseq));
     return {budgets:(d.budgets||[]).length, clients:(d.clients||[]).length, visits:(d.visits||[]).length};
   },
   uid(){ return 'id-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7); },
   nextNumber(){
+    if(!canPersist()) return '';
     let seq = parseInt(localStorage.getItem(K.seq) || '0', 10) + 1;
     localStorage.setItem(K.seq, String(seq));
     const year = new Date().getFullYear();
@@ -161,7 +168,8 @@ const Store = {
     if(n!==seq) localStorage.setItem(K.seq, String(n));
     return `${year}-${String(n).padStart(4,'0')}`;
   },
-  resetAll(){ Object.values(K).forEach(k=>localStorage.removeItem(k)); try{ ['maya_last_backup','maya_rep_seen','maya_onb_hide','maya_cloud_last_pull'].forEach(k=>localStorage.removeItem(k)); }catch(e){} notifyStoreChanged(); }
+  clearLocalCache(){ Object.values(K).forEach(k=>localStorage.removeItem(k)); try{ ['maya_last_backup','maya_rep_seen','maya_onb_hide','maya_cloud_last_pull'].forEach(k=>localStorage.removeItem(k)); }catch(e){} },
+  resetAll(){ if(!canPersist() && !window.__mayaAuthSyncing) return false; this.clearLocalCache(); notifyStoreChanged(); return true; }
 };
 window.Store = Store;
 try{ localStorage.removeItem('maya_logo_custom_v1'); }catch(e){}

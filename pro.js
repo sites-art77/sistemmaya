@@ -115,11 +115,11 @@ function dashProHTML(){
     ${follows.length?follows.slice(0,5).map(b=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1"><b>${esc(b.client?.name)}</b> <span style="color:var(--muted)">há ${ageDays(b)} dias • ${brl(b.total)}</span></div><button class="maya-btn-ghost text-xs px-2 py-1" onclick="copyFollow('${b.id}')">Copiar</button><button class="maya-btn-ghost text-xs px-2 py-1" onclick="openFollowZap('${b.id}')">WhatsApp</button><a class="maya-btn-ghost text-xs px-2 py-1" href="#/editar/${b.id}">Abrir</a></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Nenhum orçamento parado. Bom ritmo.</p>'}
   </div>
   <div class="maya-card p-4 mt-3 anim-in">
-    <div class="flex items-center gap-2 flex-wrap"><h2 class="font-extrabold">Banco de dados local</h2>
-    <span class="maya-badge b-aprovado">armazenamento local</span><div class="flex-1"></div>
+    <div class="flex items-center gap-2 flex-wrap"><h2 class="font-extrabold">Banco de dados da empresa</h2>
+    <span class="maya-badge b-aprovado">nuvem protegida</span><div class="flex-1"></div>
     <span class="text-xs font-bold" id="spacetext" style="color:var(--muted)">calculando espaço…</span></div>
     <div class="p-track mt-2"><div class="p-bar" id="spacefill" style="width:2%"></div></div>
-    <p class="text-xs mt-1" style="color:var(--muted)">Tudo fica guardado neste navegador e funciona offline. Para trocar de aparelho, use o backup em Configurações.</p>
+    <p class="text-xs mt-1" style="color:var(--muted)">Os dados ficam compartilhados na nuvem e aparecem conforme o perfil de acesso.</p>
   </div>`;
 }
 function dashAfter(){

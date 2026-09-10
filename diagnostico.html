@@ -38,7 +38,7 @@ function row(host,html){var d=document.createElement('div');d.className='row';d.
 var env=document.getElementById('env'), files=document.getElementById('files'), feat=document.getElementById('feat');
 row(env,'<span>Endereço</span><span>'+location.href.slice(0,80)+'</span>');
 row(env,'<span>Protocolo</span><span>'+location.protocol+'</span>');
-var list=['./','index.html','styles.css','fallback.css','store.js','cloud.js','pricing.js','pdf.js','app.js','pro.js','gsap.min.js','jspdf.umd.min.js','maya-garden-logo.jpg','icon-192.png','icon-512.png','manifest.json','sw.js'];
+var list=['./','index.html','styles.css','fallback.css','store.js','cloud.js','pricing.js','pdf.js','app.js','pro.js','gsap.min.js','jspdf.umd.min.js','maya-garden-logo.jpg','icon-192.png','icon-512.png'];
 var chain=Promise.resolve(), fails=0;
 list.forEach(function(f){
   chain=chain.then(function(){
@@ -60,9 +60,7 @@ chain.then(function(){
   var twOk=getComputedStyle(tw).display==='none';tw.remove();
   row(feat,'<span>Tailwind CSS</span><span class="'+(twOk?'ok':'bad')+'">'+(twOk?'OK':'FALLBACK LOCAL')+'</span>');log(true,'tailwind '+(twOk?'cdn':'fallback'));
   row(feat,'<span>GSAP (animações)</span><span class="'+(window.gsap?'ok':'bad')+'">'+(window.gsap?'OK':'opcional ausente')+'</span>');
-  if('serviceWorker' in navigator){row(feat,'<span>Service Worker</span><span class="ok">suportado</span>');
-    navigator.serviceWorker.getRegistration().then(function(r){row(feat,'<span>SW registrado</span><span class="'+(r?'ok':'bad')+'">'+(r?'SIM':'NÃO')+'</span>');});}
-  else row(feat,'<span>Service Worker</span><span class="bad">não suportado</span>');
+  row(feat,'<span>Modo offline</span><span class="ok">desativado — sincronização online</span>');
   var s=document.getElementById('st');
   s.innerHTML=fails?'<span class="bad">'+fails+' problema(s) — copie o relatório e envie ao suporte.</span>':'<span class="ok">Tudo certo por aqui. Se o sistema não abre, veja a tela inicial.</span>';
 });

@@ -13,7 +13,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="maya-garden-logo.jpg"/>
 <link rel="icon" href="maya-garden-logo.jpg"/>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -36,12 +35,11 @@ window.addEventListener('DOMContentLoaded',function(){
 <div id="errbox" role="alert" aria-live="assertive" style="display:none;background:#a11a1a;color:#fff;padding:10px;font:700 13px sans-serif"></div>
 <div id="app"><div class="max-w-6xl mx-auto p-8 text-center">Carregando MAYA Garden…</div></div>
 <script src="store.js?v=7"></script>
-<script src="cloud.js?v=1"></script>
+<script src="cloud.js?v=2"></script>
 <script src="pricing.js?v=7"></script>
 <script src="pdf.js?v=7"></script>
 <script src="app.js?v=7"></script>
 <script src="pro.js?v=7"></script>
-<script>if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
-<script>window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window._pwaPrompt=e;});</script>
+<script>if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches)window.caches.keys().then(function(ks){ks.forEach(function(k){window.caches.delete(k);});}).catch(function(){});}</script>
 </body>
 </html>

@@ -11,22 +11,14 @@ MAYA GARDEN PRO — COMO PUBLICAR (2 minutos)
 6. Em 1-2 minutos o endereço aparece na tela, tipo:
    https://SEU-USUARIO.github.io/maya-garden/
 
-Funciona em Android, iPhone e computador, inclusive offline após a 1ª visita.
+Funciona em Android, iPhone e computador com conexão à internet.
 Dúvidas? Fale com quem fez o sistema.
 
-BACKUP DOS DADOS
-================
-Como os dados ficam salvos no navegador, abra Configurações > Backup dos dados
-e clique em "Baixar backup" regularmente. Para levar o sistema a outro aparelho,
-use "Restaurar backup" e selecione o arquivo .json salvo.
-
-SINCRONIZAÇÃO EM NUVEM
-======================
-Em Configurações > Sincronização em nuvem, crie uma conta com e-mail e senha
-ou entre com uma conta já criada. Depois de entrar, use "Enviar para a nuvem"
-para guardar os dados atuais e "Baixar da nuvem" para trazer os dados para outro
-aparelho. O sistema continua funcionando offline e mantém o backup local.
-Não compartilhe sua senha; cada conta acessa somente os próprios dados.
+ACESSO E DADOS NA NUVEM
+=======================
+O sistema exige login. Os dados compartilhados ficam no banco online e são
+carregados após a autenticação. O administrador controla perfis, ativações e
+datas de expiração na área Administração. Não compartilhe sua senha.
 
 SE NÃO CARREGAR (tela em branco / 404 / travado no "Carregando")
 ================================================================

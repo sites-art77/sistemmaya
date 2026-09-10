@@ -129,13 +129,14 @@ function shell(active, html){
   const nBill = (Store.contracts||[]).filter(c=>c.active!==false&&(c.lastBilled||'').slice(0,7)!==mk).length;
   const nOS = (Store.os||[]).filter(o=>o.status==='aberta'||o.status==='em execução').length;
   const badges = {'#/orcamentos':nPend,'#/agenda':nToday,'#/recorrentes':nBill,'#/os':nOS};
+  const sysNav = window.MayaAuth?.isAdmin?.() ? [...NAV_SYS,['#/admin','Administração','⚙']] : NAV_SYS;
   const sideGroup = (t,arr)=>`<div class="side-group">${t}</div>`+arr.map(([h,l,i])=>`<a href="${h}" class="side-link${navActive(h)?' active':''}"><span class="ico">${i}</span>${l}${badges[h]?`<span class="side-badge">${badges[h]}</span>`:''}</a>`).join('');
   return `
   <div class="bg-fx" aria-hidden="true"><i></i><i></i><i></i></div>
   <aside class="side no-print">
     <div class="side-brand"><img src="${logo}" onerror="this.onerror=null;this.src='maya-garden-logo.jpg'" alt="MAYA"/><div><div class="font-black font-display" style="font-size:1.05rem">MAYA Garden</div><div style="font-size:.68rem;color:var(--muted)">Petrópolis • RJ</div></div></div>
-    ${sideGroup('PRINCIPAL',NAV_MAIN)}${sideGroup('GESTÃO',NAV_MGMT)}${sideGroup('SISTEMA',NAV_SYS)}
-    <div class="side-foot"><div class="flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full" style="background:#4CAF50;box-shadow:0 0 8px #4CAF50"></span><b class="text-xs">Dados protegidos neste aparelho</b></div><div class="mt-1">Salve o orçamento e faça backup em Configurações.</div></div>
+    ${sideGroup('PRINCIPAL',NAV_MAIN)}${sideGroup('GESTÃO',NAV_MGMT)}${sideGroup('SISTEMA',sysNav)}
+    <div class="side-foot"><div class="flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full" style="background:#4CAF50;box-shadow:0 0 8px #4CAF50"></span><b class="text-xs">Dados protegidos na nuvem</b></div><div class="mt-1">${esc(window.MayaAuth?.profile?.display_name||'Acesso autenticado')} • ${esc(window.MayaAuth?.roleLabel?.(window.MayaAuth?.role)||'usuário')}</div></div>
   </aside>
   <div class="with-side">
   <div class="maya-header no-print">
@@ -148,7 +149,7 @@ function shell(active, html){
       <a href="#/novo" class="topbar-cta bg-white font-extrabold px-4 py-2 rounded-xl text-sm" style="color:#145214">+ Novo <span class="cta-sub">orçamento</span></a>
     </div>
     <nav class="topnav max-w-6xl mx-auto px-4 pb-3 flex gap-1 flex-wrap text-sm">
-      ${[...NAV_MAIN,...NAV_MGMT,...NAV_SYS].map(([h,l])=>`<a href="${h}" class="px-3 py-2 rounded-lg font-bold ${navActive(h)?'bg-white text-[#1A5D1A]':'text-white/90 hover:bg-white/15'}">${l}</a>`).join('')}
+      ${[...NAV_MAIN,...NAV_MGMT,...sysNav].map(([h,l])=>`<a href="${h}" class="px-3 py-2 rounded-lg font-bold ${navActive(h)?'bg-white text-[#1A5D1A]':'text-white/90 hover:bg-white/15'}">${l}</a>`).join('')}
     </nav>
   </div>
   <main class="max-w-6xl mx-auto px-4 py-6">${html}</main>
@@ -156,7 +157,20 @@ function shell(active, html){
   <div id="drawer-root"></div><div id="modal-root"></div>`;
 }
 
+function renderAuthGate(){
+  const app=document.getElementById('app'); if(!app) return;
+  document.body.classList.add('maya-auth-only');
+  app.innerHTML=window.CloudSync?.authGateHtml?window.CloudSync.authGateHtml():'<div class="maya-login-card"><h1>Conectando ao MAYA Garden…</h1></div>';
+}
+function enforceRoleUi(){
+  document.body.classList.remove('maya-auth-only');
+  const readOnly=window.MayaAuth && !window.MayaAuth.canWrite();
+  document.body.classList.toggle('maya-readonly',!!readOnly);
+  if(!readOnly) return;
+  document.querySelectorAll('main button:not(.maya-session-action), main textarea, main input:not([type="search"]):not([type="date"]), main select').forEach(el=>{ el.disabled=true; el.title='Acesso somente para visualização'; });
+}
 function render(){
+  if(!window.MayaAuth?.authenticated){ renderAuthGate(); return; }
   const r = currentRoute();
   let html='';
   if(r==='#/'||r==='' ) html = dashProHTML();
@@ -166,6 +180,7 @@ function render(){
   else if(r.startsWith('#/os')) html = viewOS();
   else if(r.startsWith('#/recorrentes')) html = viewContracts();
   else if(r.startsWith('#/relatorios')) html = viewReports();
+  else if(r.startsWith('#/admin')) html = viewAdmin();
   else if(r.startsWith('#/clientes')) html = clientsProHTML('');
   else if(r.startsWith('#/catalogo')) html = viewCatalog();
   else if(r.startsWith('#/agenda')) html = agendaProHTML();
@@ -174,6 +189,7 @@ function render(){
   $('#app').innerHTML = shell(r, html);
   window._lastRoute = r;
   afterRender(r);
+  enforceRoleUi();
   animateIn();
   finishProg();
   if(!window.__booted){ window.__booted=true; sidebarIntro(); }
@@ -211,8 +227,8 @@ function viewDashboardLegacy(){
     ${recent.length? `<div class="overflow-x-auto"><table class="table-maya"><tr><th>Nº</th><th>Cliente</th><th>Total</th><th>Status</th><th></th></tr>${recent.map(b=>`<tr><td class="font-bold">${esc(b.number)}</td><td>${esc(b.client?.name)}</td><td>${brl(b.total)}</td><td><span class="maya-badge b-${b.status}">${b.status}</span></td><td><a class="font-bold text-[#1A5D1A]" href="#/editar/${b.id}">abrir</a></td></tr>`).join('')}</table></div>`:'<p class="text-sm text-gray-600">Nenhum ainda. Clique em Novo orçamento.</p>'}
   </div>
   <div class="maya-card p-4 mt-3 anim-in">
-    <h2 class="font-extrabold mb-2">Banco de dados local</h2>
-    <p class="text-sm text-gray-600 mb-2">Os dados ficam salvos automaticamente neste navegador.</p>
+    <h2 class="font-extrabold mb-2">Banco de dados da empresa</h2>
+    <p class="text-sm text-gray-600 mb-2">Os dados ficam salvos automaticamente na nuvem compartilhada.</p>
   </div>`;
 }
 function afterRender(r){
@@ -817,48 +833,51 @@ window.addVisit=()=>{ openModal('Agendar visita', MF.text('av-client','Cliente *
 window.toggleVisit=id=>{ const a=Store.visits; const v=a.find(x=>x.id===id); v.status=v.status==='concluída'?'agendada':'concluída'; Store.visits=a; render(); };
 window.delVisit=async id=>{ if(!await confirmModal('Excluir visita','Remover esta visita da agenda?'))return; Store.visits=Store.visits.filter(v=>v.id!==id); render(); };
 
-/* ---------- config ---------- */
+/* ---------- config e acessos ---------- */
+function viewAdmin(){
+  if(!window.MayaAuth?.isAdmin()) return `<h1 class="text-2xl font-black mb-3">Administração</h1><div class="maya-card p-4"><b>Acesso restrito</b><p class="text-sm mt-1">Somente o administrador pode gerenciar logins, perfis e expirações.</p></div>`;
+  return `<h1 class="text-2xl font-black mb-3 anim-in">Administração de acessos</h1><p class="text-sm mb-3" style="color:var(--muted)">Controle quem entra no sistema. Deixe a data vazia para um acesso infinito.</p>${window.CloudSync?.adminHtml?window.CloudSync.adminHtml():'<div class="maya-card p-4">Carregando acessos…</div>'}`;
+}
 function viewConfig(){
-  const st=Store.settings, p=Store.pricing;
-  return `<h1 class="text-2xl font-black mb-3 anim-in">Config — tudo editável</h1>
-  <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Instalar como aplicativo</b><div class="text-xs" style="color:var(--muted)">Acesso direto na tela inicial do celular, funciona offline.</div></div><button class="maya-btn text-sm" onclick="installApp()">Instalar app</button></div></div>
-  <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Sincronização em nuvem</b><div class="text-xs" style="color:var(--muted)">Use a mesma conta em mais de um aparelho. O modo offline continua disponível.</div></div></div>${window.CloudSync?.cardHtml?window.CloudSync.cardHtml():'<div class="text-sm">Carregando conexão…</div>'}</div>
-  <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Backup dos dados</b><div class="text-xs" style="color:var(--muted)">Os dados ficam neste navegador. Baixe uma cópia antes de trocar de aparelho ou limpar o navegador.</div></div><button class="maya-btn-ghost text-sm" onclick="exportBackup()">Baixar backup</button><label class="maya-btn text-sm cursor-pointer">Restaurar backup<input id="backup-file" type="file" accept="application/json,.json" class="hidden" onchange="importBackupFile(this)"></label></div><div id="backup-status" class="text-xs mt-2" style="color:var(--muted)">Backup inclui orçamentos, clientes, agenda, contratos, catálogo e configurações.</div></div>
+  const st=Store.settings, p=Store.pricing, write=window.MayaAuth?.canWrite?.()!==false, disabled=write?'':'disabled';
+  return `<h1 class="text-2xl font-black mb-3 anim-in">Configurações</h1>
+  <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Sessão atual</b><div class="text-xs" style="color:var(--muted)">O sistema exige login e guarda os dados compartilhados na nuvem.</div></div></div><div class="mt-3">${window.CloudSync?.accountHtml?window.CloudSync.accountHtml():'Carregando sessão…'}</div></div>
   <div class="grid lg:grid-cols-2 gap-3">
   <div class="maya-card p-4 anim-in" style="opacity:1"><h2 class="font-extrabold mb-2">Empresa (sai no PDF)</h2>
     <div class="grid grid-cols-2 gap-2 text-sm">
-    ${[['company','Empresa'],['tagline','Slogan'],['cnpj','CNPJ (opcional)'],['email','E-mail'],['whatsappDisplay','Whats exibição'],['whatsappLink','Whats link (só números c/ DDI)'],['instagram','Instagram'],['address','Endereço'],['pix','Pix'],['headerText','Texto validade'],['footerText','Texto rodapé']].map(([k,l])=>`<label class="font-bold ${k==='headerText'||k==='footerText'||k==='tagline'?'col-span-2':''}">${l}<input class="maya-input" id="s-${k}" value="${esc(st[k]||'')}"></label>`).join('')}
-    <label class="font-bold col-span-2">Condições e termos (saem no PDF)<textarea id="s-terms" class="maya-textarea" rows="3">${esc(st.terms||'')}</textarea></label>
-    <label class="font-bold col-span-2">Modelo msg WhatsApp <span class="font-normal" style="color:var(--muted)">({nome} {numero} {total} {validade} {empresa})</span><textarea id="s-zapTemplate" class="maya-textarea" rows="2">${esc(st.zapTemplate||'')}</textarea></label>
-    <label class="font-bold col-span-2">Modelo msg retorno <span class="font-normal" style="color:var(--muted)">({nome} {numero} {total} {dias} {empresa})</span><textarea id="s-zapFollow" class="maya-textarea" rows="2">${esc(st.zapFollow||'')}</textarea></label>
-    <label class="font-bold">Validade padrão dias<input type="number" id="s-validityDays" class="maya-input" value="${esc(st.validityDays)}"></label>
-    <label class="font-bold">Sinal padrão %<input type="number" id="s-signalPct" class="maya-input" value="${esc(st.signalPct)}"></label>
-    <label class="font-bold">Desloc padrão R$<input type="number" id="s-displacementDefault" class="maya-input" value="${esc(st.displacementDefault)}"></label>
+    ${[['company','Empresa'],['tagline','Slogan'],['cnpj','CNPJ (opcional)'],['email','E-mail'],['whatsappDisplay','Whats exibição'],['whatsappLink','Whats link (só números c/ DDI)'],['instagram','Instagram'],['address','Endereço'],['pix','Pix'],['headerText','Texto validade'],['footerText','Texto rodapé']].map(([k,l])=>`<label class="font-bold ${k==='headerText'||k==='footerText'||k==='tagline'?'col-span-2':''}">${l}<input ${disabled} class="maya-input" id="s-${k}" value="${esc(st[k]||'')}"></label>`).join('')}
+    <label class="font-bold col-span-2">Condições e termos (saem no PDF)<textarea ${disabled} id="s-terms" class="maya-textarea" rows="3">${esc(st.terms||'')}</textarea></label>
+    <label class="font-bold col-span-2">Modelo msg WhatsApp <span class="font-normal" style="color:var(--muted)">({nome} {numero} {total} {validade} {empresa})</span><textarea ${disabled} id="s-zapTemplate" class="maya-textarea" rows="2">${esc(st.zapTemplate||'')}</textarea></label>
+    <label class="font-bold col-span-2">Modelo msg retorno <span class="font-normal" style="color:var(--muted)">({nome} {numero} {total} {dias} {empresa})</span><textarea ${disabled} id="s-zapFollow" class="maya-textarea" rows="2">${esc(st.zapFollow||'')}</textarea></label>
+    <label class="font-bold">Validade padrão dias<input ${disabled} type="number" id="s-validityDays" class="maya-input" value="${esc(st.validityDays)}"></label>
+    <label class="font-bold">Sinal padrão %<input ${disabled} type="number" id="s-signalPct" class="maya-input" value="${esc(st.signalPct)}"></label>
+    <label class="font-bold">Desloc padrão R$<input ${disabled} type="number" id="s-displacementDefault" class="maya-input" value="${esc(st.displacementDefault)}"></label>
     </div>
     <div class="mt-2 text-sm grid grid-cols-3 gap-2">
-      <label class="font-bold">Opacidade marca<input type="number" step="0.01" min="0" max="0.3" id="s-wmOpacity" class="maya-input" value="${esc(st.wmOpacity)}"></label>
-      <label class="font-bold">Tamanho %<input type="number" id="s-wmSizePct" class="maya-input" value="${esc(st.wmSizePct)}"></label>
-      <label class="font-bold">Marca ON?<select id="s-wmEnabled" class="maya-select"><option value="1" ${st.wmEnabled?'selected':''}>sim</option><option value="0" ${!st.wmEnabled?'selected':''}>não</option></select></label>
+      <label class="font-bold">Opacidade marca<input ${disabled} type="number" step="0.01" min="0" max="0.3" id="s-wmOpacity" class="maya-input" value="${esc(st.wmOpacity)}"></label>
+      <label class="font-bold">Tamanho %<input ${disabled} type="number" id="s-wmSizePct" class="maya-input" value="${esc(st.wmSizePct)}"></label>
+      <label class="font-bold">Marca ON?<select ${disabled} id="s-wmEnabled" class="maya-select"><option value="1" ${st.wmEnabled?'selected':''}>sim</option><option value="0" ${!st.wmEnabled?'selected':''}>não</option></select></label>
     </div>
-    <button class="maya-btn mt-3" onclick="saveSettings()">Salvar empresa</button>
+    <button ${disabled} class="maya-btn mt-3" onclick="saveSettings()">Salvar empresa</button>
   </div>
   <div class="maya-card p-4 anim-in" style="opacity:1"><h2 class="font-extrabold mb-2">Tabela de referência (dica de preço)</h2>
     <div class="grid grid-cols-3 gap-2 text-sm">
-    ${Object.entries({marginPct:'Margem %',horaMin:'Hora mín',horaIdeal:'Hora ideal',horaMax:'Hora máx',m2ManutMin:'Manut m² mín',m2ManutIdeal:'Manut ideal',m2ManutMax:'Manut máx',m2ImplMin:'Impl mín',m2ImplIdeal:'Impl ideal',m2ImplMax:'Impl máx',projetoM2Min:'Proj mín',projetoM2Ideal:'Proj ideal',projetoM2Max:'Proj máx',vasoMin:'Vaso mín',vasoIdeal:'Vaso ideal',vasoMax:'Vaso máx',visitaOrqMin:'Visita orq mín',visitaOrqIdeal:'Visita ideal',visitaOrqMax:'Visita máx',orquidarioMin:'Orquid mín',orquidarioIdeal:'Orquid ideal',orquidarioMax:'Orquid máx'}).map(([k,l])=>`<label class="font-bold">${l}<input type="number" step="any" id="p-${k}" class="maya-input" value="${esc(p[k])}"></label>`).join('')}
+    ${Object.entries({marginPct:'Margem %',horaMin:'Hora mín',horaIdeal:'Hora ideal',horaMax:'Hora máx',m2ManutMin:'Manut m² mín',m2ManutIdeal:'Manut ideal',m2ManutMax:'Manut máx',m2ImplMin:'Impl mín',m2ImplIdeal:'Impl ideal',m2ImplMax:'Impl máx',projetoM2Min:'Proj mín',projetoM2Ideal:'Proj ideal',projetoM2Max:'Proj máx',vasoMin:'Vaso mín',vasoIdeal:'Vaso ideal',vasoMax:'Vaso máx',visitaOrqMin:'Visita orq mín',visitaOrqIdeal:'Visita ideal',visitaOrqMax:'Visita máx',orquidarioMin:'Orquid mín',orquidarioIdeal:'Orquid ideal',orquidarioMax:'Orquid máx'}).map(([k,l])=>`<label class="font-bold">${l}<input ${disabled} type="number" step="any" id="p-${k}" class="maya-input" value="${esc(p[k])}"></label>`).join('')}
     </div>
-    <button class="maya-btn mt-3" onclick="savePricing()">Salvar tabela</button>
-    <div class="mt-4 border-t pt-2 text-sm"><b class="text-red-700">Zona de perigo</b><div class="flex gap-2 mt-1 flex-wrap"><button class="maya-btn-ghost text-sm" onclick="seedSample()">Dados exemplo</button><button class="maya-btn-ghost text-sm !text-red-700 !border-red-300" onclick="confirmReset()">Apagar tudo</button></div></div>
+    <button ${disabled} class="maya-btn mt-3" onclick="savePricing()">Salvar tabela</button>
+    ${write?'<div class="mt-4 border-t pt-2 text-sm"><b class="text-red-700">Zona de perigo</b><div class="flex gap-2 mt-1 flex-wrap"><button class="maya-btn-ghost text-sm" onclick="seedSample()">Dados exemplo</button><button class="maya-btn-ghost text-sm !text-red-700 !border-red-300" onclick="confirmReset()">Apagar tudo</button></div></div>':'<div class="mt-4 text-xs" style="color:var(--muted)">Perfil visitante: somente visualização.</div>'}
   </div></div>`;
 }
-window.confirmReset=async ()=>{ if(!await confirmModal('Apagar tudo','Todos os orçamentos, clientes, visitas e contratos serão apagados deste navegador. Deseja continuar?','Apagar tudo'))return; Store.resetAll(); location.hash='#/'; location.reload(); };
+window.confirmReset=async ()=>{ if(!window.MayaAuth?.canWrite?.()){ toast('Acesso somente para visualização.'); return; } if(!await confirmModal('Apagar tudo','Todos os dados compartilhados serão apagados da nuvem. Deseja continuar?','Apagar tudo'))return; Store.resetAll(); await window.CloudSync?.pushLocal?.(false); location.hash='#/'; location.reload(); };
 window.saveSettings=()=>{
+  if(!window.MayaAuth?.canWrite?.()){ toast('Acesso somente para visualização.'); return; }
   const st=Store.settings;
   ['company','tagline','cnpj','email','whatsappDisplay','whatsappLink','instagram','address','pix','headerText','footerText','terms','zapTemplate','zapFollow'].forEach(k=>st[k]=$('#s-'+k).value);
   st.validityDays=Number($('#s-validityDays').value||15); st.signalPct=Number($('#s-signalPct').value||50); st.displacementDefault=Number($('#s-displacementDefault').value||0);
   st.wmOpacity=Number($('#s-wmOpacity').value||0.09); st.wmSizePct=Number($('#s-wmSizePct').value||60); st.wmEnabled=$('#s-wmEnabled').value==='1';
   Store.settings=st; toast('Empresa salva!'); render();
 };
-window.savePricing=()=>{ const p=Store.pricing; $$('[id^="p-"]').forEach(i=>{ p[i.id.slice(2)]=Number(i.value)||0; }); Store.pricing=p; toast('Tabela salva!'); };
+window.savePricing=()=>{ if(!window.MayaAuth?.canWrite?.()){ toast('Acesso somente para visualização.'); return; } const p=Store.pricing; $$('[id^="p-"]').forEach(i=>{ p[i.id.slice(2)]=Number(i.value)||0; }); Store.pricing=p; toast('Tabela salva!'); };
 
 /* ---------- backup local ---------- */
 window.exportBackup=()=>{
@@ -886,7 +905,8 @@ window.importBackupFile=async input=>{
   finally{ input.value=''; }
 };
 
-window.addEventListener('maya-cloud-state',()=>{ try{ if(typeof render==='function' && currentRoute().startsWith('#/config')) render(); }catch(e){} });
+window.addEventListener('maya-auth-state',()=>{ try{ if(window.MayaAuth?.authenticated) render(); else renderAuthGate(); }catch(e){} });
+window.addEventListener('maya-cloud-state',()=>{ try{ if(typeof render==='function' && window.MayaAuth?.authenticated && (currentRoute().startsWith('#/config')||currentRoute().startsWith('#/admin'))) render(); }catch(e){} });
 
 /* ---------- salvamento automático (navegador) ---------- */
 function storageInfo(){ try{
@@ -894,7 +914,7 @@ function storageInfo(){ try{
     return {kb:bytes/1024};
   }catch(e){ return {kb:0}; } }
 
-function bootMaya(){ try{ render(); sidebarIntroOnce(); }catch(e){ var d=document.getElementById('errbox'); if(d){ d.style.display='block'; d.textContent='Erro ao abrir: '+(e&&e.message||e); } console.error(e); } }
+function bootMaya(){ try{ if(window.MayaAuth?.authenticated) { render(); sidebarIntroOnce(); } else renderAuthGate(); }catch(e){ var d=document.getElementById('errbox'); if(d){ d.style.display='block'; d.textContent='Erro ao abrir: '+(e&&e.message||e); } console.error(e); } }
 function sidebarIntroOnce(){ if(window.__booted) return; }
 window.addEventListener('beforeunload', function(e){
   if(window._dirty && /^#\/(novo|editar\/)\b/.test(currentRoute())){ e.preventDefault(); e.returnValue=''; }

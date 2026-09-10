@@ -268,3 +268,11 @@ body::after{content:"";position:fixed;inset:0;z-index:5;pointer-events:none;opac
 @media (prefers-reduced-motion: reduce){
   *{animation:none!important;transition:none!important}
 }
+
+/* acesso obrigatório e perfis */
+body.maya-auth-only{min-height:100vh;background:radial-gradient(circle at 15% 10%,rgba(85,153,92,.18),transparent 35%),#0d2619;color:#f6fff4}
+body.maya-auth-only #app{min-height:100vh;display:grid;place-items:center;padding:24px}
+.maya-login-card{width:min(420px,100%);padding:32px;border:1px solid rgba(190,225,180,.25);border-radius:24px;background:rgba(255,255,255,.97);color:#173b1b;box-shadow:0 24px 80px rgba(0,0,0,.28)}
+.maya-login-card h1{margin:0;font:900 1.8rem/1.1 var(--font-display,inherit);letter-spacing:-.02em}
+.maya-login-card p{margin:.45rem 0 0}.maya-login-sub{color:#55755a}.maya-login-status{min-height:1.3em;color:#55755a;font-size:.82rem}.maya-login-note{color:#6c806e;font-size:.75rem}.maya-login-mark{width:48px;height:48px;display:grid;place-items:center;margin-bottom:18px;border-radius:15px;background:#d9f1d4;color:#1b6728;font:900 1.5rem Georgia,serif}
+body.maya-readonly main button[disabled]{opacity:.55;cursor:not-allowed}
