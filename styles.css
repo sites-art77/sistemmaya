@@ -202,6 +202,14 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
 /* ---- editor de orçamento responsivo ---- */
 .budget-editor-actions{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
 .budget-editor-actions button{white-space:nowrap}
+.budget-items-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap}
+.budget-items-head h2{line-height:1.2}
+.budget-items-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem;min-width:min(100%,440px)}
+.budget-items-actions button{width:100%;min-height:42px;white-space:normal;line-height:1.15}
+.drawer-section-title{margin-top:.8rem;padding:.45rem 0 .35rem;border-bottom:1px solid var(--line)}
+.drawer-list-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:.75rem;padding:.65rem 0;border-bottom:1px solid var(--line)}
+.drawer-list-row > div{min-width:0;overflow-wrap:anywhere}
+.drawer-list-row button{min-width:4.5rem}
 @media(max-width:1023px){
   .budget-editor-top{align-items:flex-start!important}
   .budget-editor-top h1{flex:1 0 100%;min-width:0;font-size:clamp(1.3rem,5vw,1.75rem);line-height:1.1;overflow-wrap:anywhere}
@@ -214,8 +222,17 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
   .budget-editor label{min-width:0}
   .budget-editor input,.budget-editor select,.budget-editor textarea{min-width:0}
 }
+@media(max-width:560px){
+  .budget-items-head{align-items:stretch}
+  .budget-items-head h2{width:100%}
+  .budget-items-actions{width:100%;min-width:0;grid-template-columns:1fr}
+  .budget-items-actions button{min-height:44px}
+}
 @media(max-width:420px){
   .budget-editor-actions{grid-template-columns:1fr}
+  .drawer{width:100%;border-left:0;border-radius:0}
+  .drawer-list-row{grid-template-columns:1fr;gap:.5rem}
+  .drawer-list-row button{width:100%}
 }
 /* ---- paleta de comando (Ctrl+K) ---- */
 .pal-box{position:fixed;z-index:75;left:50%;top:12vh;transform:translateX(-50%);width:min(560px,93vw);

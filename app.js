@@ -299,10 +299,12 @@ function viewEditor(isEdit){
     </div>
 
     <div class="maya-card p-4 anim-in">
-      <div class="flex items-center gap-2 mb-2"><h2 class="font-extrabold">2. Itens (livres)</h2><div class="flex-1"></div>
-        <button class="maya-btn-ghost text-sm" onclick="openPackPick()">Pacote</button>
-        <button class="maya-btn-ghost text-sm" onclick="openCatalogPick()">+ do catálogo</button>
-        <button class="maya-btn text-sm" onclick="addItem()">+ item livre</button>
+      <div class="budget-items-head mb-3"><h2 class="font-extrabold">2. Itens (livres)</h2>
+        <div class="budget-items-actions" role="group" aria-label="Adicionar itens ao orçamento">
+          <button class="maya-btn-ghost text-sm" onclick="openPackPick()">Pacote</button>
+          <button class="maya-btn-ghost text-sm" onclick="openCatalogPick()">+ do catálogo</button>
+          <button class="maya-btn text-sm" onclick="addItem()">+ item livre</button>
+        </div>
       </div>
       <div id="items"></div>
       <div class="grid grid-cols-3 gap-2 mt-3 text-sm">
@@ -555,7 +557,12 @@ window.copyZap = ()=>{ collectSilent(); recalcDraft(); const t=zapFill(Draft); n
 function openDrawer(html){
   $('#drawer-root').innerHTML = `<div class="modal-bg show" onclick="closeDrawer()"></div><div class="drawer p-4 overflow-y-auto" id="drawer">${html}</div>`;
   const d = document.querySelector('#drawer');
-  if(window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches){ gsap.fromTo(d,{xPercent:105},{xPercent:0,duration:.38,ease:'power3.out',clearProps:'transform'}); gsap.fromTo('#drawer > *',{x:24,opacity:0},{x:0,opacity:1,duration:.35,stagger:.05,delay:.1,ease:'power3.out',clearProps:'transform'}); }
+  if(window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches){
+    // O drawer começa deslocado pelo CSS. Não limpar o transform no fim:
+    // isso faria o CSS original (translateX(105%)) esconder o painel novamente.
+    gsap.fromTo(d,{xPercent:105},{xPercent:0,duration:.38,ease:'power3.out'});
+    gsap.fromTo('#drawer > *',{x:24,opacity:0},{x:0,opacity:1,duration:.35,stagger:.05,delay:.1,ease:'power3.out',clearProps:'transform,opacity'});
+  }
   else if(d){ d.style.transform='translateX(0)'; }
 }
 window.closeDrawer = ()=>{
@@ -630,7 +637,7 @@ const mv = id=>{ const e=document.getElementById(id); return e?e.value.trim():''
 window.openCatalogPick = ()=>{
   const cats = [...new Set(Store.catalog.map(c=>c.cat))];
   openDrawer(`<h3 class="font-black text-lg mb-2">Puxar do catálogo (preço editável depois)</h3>
-  ${cats.map(cat=>`<div class="font-extrabold mt-2 text-[#1A5D1A]">${esc(cat)}</div>${Store.catalog.filter(c=>c.cat===cat).map(c=>`<div class="flex items-center gap-2 border-b py-1 text-sm"><div class="flex-1"><b>${esc(c.name)}</b><div class="text-xs text-gray-500">${esc(c.desc||'')} • ${brl(c.price)}/${esc(c.unit)}</div></div><button class="maya-btn text-xs" onclick="addFromCatalog('${c.id}')">+ add</button></div>`).join('')}`).join('')}
+  ${cats.map(cat=>`<div class="drawer-section-title font-extrabold text-[#1A5D1A]">${esc(cat)}</div>${Store.catalog.filter(c=>c.cat===cat).map(c=>`<div class="drawer-list-row text-sm"><div><b>${esc(c.name)}</b><div class="text-xs text-gray-500">${esc(c.desc||'')} • ${brl(c.price)}/${esc(c.unit)}</div></div><button class="maya-btn text-xs" onclick="addFromCatalog('${c.id}')">+ add</button></div>`).join('')}`).join('')}
   <button class="maya-btn-ghost w-full mt-3" onclick="closeDrawer()">Fechar</button>`);
 };
 window.addFromCatalog = id=>{

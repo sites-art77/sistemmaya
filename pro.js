@@ -365,7 +365,7 @@ window.openPackPick = ()=>{
   openDrawer(`<h3 class="font-black text-lg mb-1">Pacotes prontos</h3>
   <p class="text-xs mb-2" style="color:var(--muted)">1 clique adiciona todos os itens (editáveis depois).</p>
   ${ps.map(p=>`<div class="border rounded-xl p-3 mb-2" style="border-color:var(--line)">
-    <div class="flex items-center gap-2"><b>${esc(p.name)}</b><div class="flex-1"></div><b style="color:var(--maya-accent)">${brl(packTotal(p))}</b></div>
+    <div class="drawer-list-row !border-0 !py-0"><b>${esc(p.name)}</b><b style="color:var(--maya-accent)">${brl(packTotal(p))}</b></div>
     <div class="text-xs mb-2" style="color:var(--muted)">${esc(p.desc||'')} • ${p.items.length} itens</div>
     <button class="maya-btn text-xs w-full" onclick="addPack('${p.id}')">Adicionar pacote</button></div>`).join('')||'<p class="text-sm" style="color:var(--muted)">Nenhum pacote. Crie em Catálogo.</p>'}
   <button class="maya-btn-ghost w-full mt-1" onclick="closeDrawer()">Fechar</button>`);
