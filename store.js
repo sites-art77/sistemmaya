@@ -88,7 +88,8 @@ function load(key, fallback){
     return JSON.parse(raw);
   }catch{ return structuredClone(fallback); }
 }
-function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+function notifyStoreChanged(){ if(window.__mayaCloudMute) return; try{ window.dispatchEvent(new CustomEvent('maya-store-changed')); }catch(e){} }
+function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); notifyStoreChanged(); }
 
 const Store = {
   get settings(){ const s = load(K.settings, defaultSettings); if(s && /^assets\//.test(String(s.logoPath||''))) s.logoPath=String(s.logoPath).replace(/^assets\//,''); if(s && s.zapTemplate) s.zapTemplate = String(s.zapTemplate).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu,'').replace(/ {2,}/g,' '); return s; },
@@ -160,7 +161,7 @@ const Store = {
     if(n!==seq) localStorage.setItem(K.seq, String(n));
     return `${year}-${String(n).padStart(4,'0')}`;
   },
-  resetAll(){ Object.values(K).forEach(k=>localStorage.removeItem(k)); try{ ['maya_last_backup','maya_rep_seen','maya_onb_hide'].forEach(k=>localStorage.removeItem(k)); }catch(e){} }
+  resetAll(){ Object.values(K).forEach(k=>localStorage.removeItem(k)); try{ ['maya_last_backup','maya_rep_seen','maya_onb_hide','maya_cloud_last_pull'].forEach(k=>localStorage.removeItem(k)); }catch(e){} notifyStoreChanged(); }
 };
 window.Store = Store;
 try{ localStorage.removeItem('maya_logo_custom_v1'); }catch(e){}

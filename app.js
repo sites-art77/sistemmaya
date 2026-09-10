@@ -822,6 +822,7 @@ function viewConfig(){
   const st=Store.settings, p=Store.pricing;
   return `<h1 class="text-2xl font-black mb-3 anim-in">Config — tudo editável</h1>
   <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Instalar como aplicativo</b><div class="text-xs" style="color:var(--muted)">Acesso direto na tela inicial do celular, funciona offline.</div></div><button class="maya-btn text-sm" onclick="installApp()">Instalar app</button></div></div>
+  <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Sincronização em nuvem</b><div class="text-xs" style="color:var(--muted)">Use a mesma conta em mais de um aparelho. O modo offline continua disponível.</div></div></div>${window.CloudSync?.cardHtml?window.CloudSync.cardHtml():'<div class="text-sm">Carregando conexão…</div>'}</div>
   <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Backup dos dados</b><div class="text-xs" style="color:var(--muted)">Os dados ficam neste navegador. Baixe uma cópia antes de trocar de aparelho ou limpar o navegador.</div></div><button class="maya-btn-ghost text-sm" onclick="exportBackup()">Baixar backup</button><label class="maya-btn text-sm cursor-pointer">Restaurar backup<input id="backup-file" type="file" accept="application/json,.json" class="hidden" onchange="importBackupFile(this)"></label></div><div id="backup-status" class="text-xs mt-2" style="color:var(--muted)">Backup inclui orçamentos, clientes, agenda, contratos, catálogo e configurações.</div></div>
   <div class="grid lg:grid-cols-2 gap-3">
   <div class="maya-card p-4 anim-in" style="opacity:1"><h2 class="font-extrabold mb-2">Empresa (sai no PDF)</h2>
@@ -884,6 +885,8 @@ window.importBackupFile=async input=>{
   }catch(e){ toast((e&&e.message)||'Arquivo de backup inválido.'); }
   finally{ input.value=''; }
 };
+
+window.addEventListener('maya-cloud-state',()=>{ try{ if(typeof render==='function' && currentRoute().startsWith('#/config')) render(); }catch(e){} });
 
 /* ---------- salvamento automático (navegador) ---------- */
 function storageInfo(){ try{

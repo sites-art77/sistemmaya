@@ -20,6 +20,14 @@ Como os dados ficam salvos no navegador, abra Configurações > Backup dos dados
 e clique em "Baixar backup" regularmente. Para levar o sistema a outro aparelho,
 use "Restaurar backup" e selecione o arquivo .json salvo.
 
+SINCRONIZAÇÃO EM NUVEM
+======================
+Em Configurações > Sincronização em nuvem, crie uma conta com e-mail e senha
+ou entre com uma conta já criada. Depois de entrar, use "Enviar para a nuvem"
+para guardar os dados atuais e "Baixar da nuvem" para trazer os dados para outro
+aparelho. O sistema continua funcionando offline e mantém o backup local.
+Não compartilhe sua senha; cada conta acessa somente os próprios dados.
+
 SE NÃO CARREGAR (tela em branco / 404 / travado no "Carregando")
 ================================================================
 1. Primeiro abra no ar: https://SEU-USUARIO.github.io/maya-garden/diagnostico.html

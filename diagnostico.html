@@ -38,7 +38,7 @@ function row(host,html){var d=document.createElement('div');d.className='row';d.
 var env=document.getElementById('env'), files=document.getElementById('files'), feat=document.getElementById('feat');
 row(env,'<span>Endereço</span><span>'+location.href.slice(0,80)+'</span>');
 row(env,'<span>Protocolo</span><span>'+location.protocol+'</span>');
-var list=['./','index.html','styles.css','fallback.css','store.js','pricing.js','pdf.js','app.js','pro.js','gsap.min.js','jspdf.umd.min.js','maya-garden-logo.jpg','icon-192.png','icon-512.png','manifest.json','sw.js'];
+var list=['./','index.html','styles.css','fallback.css','store.js','cloud.js','pricing.js','pdf.js','app.js','pro.js','gsap.min.js','jspdf.umd.min.js','maya-garden-logo.jpg','icon-192.png','icon-512.png','manifest.json','sw.js'];
 var chain=Promise.resolve(), fails=0;
 list.forEach(function(f){
   chain=chain.then(function(){
