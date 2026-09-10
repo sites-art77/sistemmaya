@@ -503,9 +503,8 @@ function paintPreviewOnly(){
     <div class="pp-client"><b>Cliente:</b> ${esc(Draft.client.name||'-')} &nbsp;•&nbsp; ${esc(Draft.client.phone||'-')} &nbsp;•&nbsp; ${esc(Draft.client.address||'-')}</div>
     <table class="table-maya"><tr><th>Descrição</th><th>Qtd</th><th>Unit</th><th>Total</th></tr>
     ${(Draft.items||[]).map(it=>`<tr><td>${esc(it.desc||'-')}</td><td>${esc(it.qty)} ${esc(it.unitLabel||'')}</td><td>${brl(it.unit)}</td><td class="font-bold">${brl((Number(it.qty)||0)*(Number(it.unit)||0))}</td></tr>`).join('')}</table>
-    <div class="text-right mt-2 text-sm" style="color:#333">Subtotal ${brl(Draft.subtotal)} • Desconto -${brl(Draft.discountVal)} ${Draft.displacement?`• Desloc +${brl(Draft.displacement)}`:''}</div>
-    <div class="pp-totalbox"><span class="text-sm" style="color:#1A5D1A">TOTAL&nbsp;&nbsp;</span><span class="pp-total">${brl(Draft.total)}</span></div>
-    <div class="text-xs mt-1" style="color:#555">Pagamento: ${esc(payLabel(Draft))} ${Draft.signalPct?`• Sinal ${esc(Draft.signalPct)}% (${brl(Draft.total*Number(Draft.signalPct)/100)})`:''}</div>
+    <div class="pp-totalbox"><span class="text-sm" style="color:#1A5D1A">VALOR TOTAL&nbsp;&nbsp;</span><span class="pp-total">${brl(Draft.total)}</span></div>
+    <div class="text-xs mt-1" style="color:#555">Pagamento: ${esc(payLabel(Draft))} ${Draft.signalPct?`• Sinal ${esc(Draft.signalPct)}% (${brl(Draft.total*Number(Draft.signalPct)/100)}) • Saldo na conclusão (${brl(Draft.total*(1-Number(Draft.signalPct)/100))})`:''}</div>
     ${Draft.notes?`<div class="text-xs mt-1" style="color:#333"><b>Obs:</b> ${esc(Draft.notes)}</div>`:''}
     <div class="text-xs mt-2" style="color:#777">${esc(st.headerText)} ${st.pix?`• Pix: ${esc(st.pix)}`:''}</div>`;
 }

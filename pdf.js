@@ -15,7 +15,7 @@ async function loadImageDataUrl(src){
 }
 
 function brlPDF(v){ return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-function safeFile(s){ return (s||'cliente').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase().slice(0,40)||'cliente'; }
+function safeFile(s){ return String(s||'Cliente').normalize('NFC').replace(/[<>:"/\\|?*\u0000-\u001F]/g,' ').replace(/\s+/g,' ').trim().slice(0,56)||'Cliente'; }
 
 function fmtDPDF(iso){ try{ const p=String(iso||'').slice(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:String(iso||''); }catch{ return String(iso||''); } }
 
@@ -111,18 +111,21 @@ async function gerarPDF(budget){
   }
   y += 3;
   if(y > H-70){ doc.addPage(); y=34; }
-  // totais
-  const rx = W-M-72;
-  doc.setFontSize(9);
-  doc.text(`Subtotal: ${brlPDF(budget.subtotal)}`, rx, y); y+=5.5;
-  doc.text(`Desconto: -${brlPDF(budget.discountVal)}${budget.discountType==='pct'?' ('+(budget.discount||0)+'%)':''}`, rx, y); y+=5.5;
-  if(Number(budget.displacement)>0){ doc.text(`Deslocamento: ${brlPDF(budget.displacement)}`, rx, y); y+=5.5; }
-  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(26,93,26);
-  doc.setFillColor(232,244,233); doc.roundedRect(rx-4, y-3, 76, 11, 2, 2, 'F');
-  doc.text(`TOTAL: ${brlPDF(budget.total)}`, rx, y+2); doc.setTextColor(20,20,20); y+=10;
+  // valor final apresentado ao cliente; os cálculos internos não são expostos no PDF
+  const rx = W-M-76;
+  doc.setFillColor(232,244,233);
+  doc.setDrawColor(180,214,184);
+  doc.roundedRect(rx-5, y-5, 81, 15, 2.5, 2.5, 'FD');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,100,65);
+  doc.text('VALOR TOTAL', rx, y-0.5);
+  doc.setFontSize(12); doc.setTextColor(26,93,26);
+  doc.text(brlPDF(budget.total), rx, y+6);
+  doc.setTextColor(20,20,20); y+=17;
   if(Number(budget.signalPct)>0){
     doc.setFont('helvetica','normal'); doc.setFontSize(9);
-    doc.text(`Sinal (${budget.signalPct}%): ${brlPDF(budget.total*Number(budget.signalPct)/100)}   Restante: ${brlPDF(budget.total*(1-Number(budget.signalPct)/100))}`, M, y); y+=6;
+    const payment = `Condição de pagamento: sinal de ${budget.signalPct}% (${brlPDF(budget.total*Number(budget.signalPct)/100)}) • saldo na conclusão (${brlPDF(budget.total*(1-Number(budget.signalPct)/100))})`;
+    const paymentLines = doc.splitTextToSize(payment, W-2*M);
+    doc.text(paymentLines, M, y); y += paymentLines.length*4.5 + 2;
   }
   if(budget.notes){
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text('Observações:', M, y); y+=5;
@@ -179,7 +182,7 @@ async function gerarPDF(budget){
   const pages = doc.getNumberOfPages();
   for(let i=1;i<=pages;i++){ doc.setPage(i); watermark(); headerFooter(i,pages); }
   // header/footer foram desenhados após watermark? Reordem: watermark por cima com opacity baixa = legível. Mantém.
-  const fname = `orcamento-${budget.number}-${safeFile(budget.client?.name)}.pdf`;
+  const fname = `MAYA Garden - Orçamento ${budget.number} - ${safeFile(budget.client?.name)}.pdf`;
   doc.save(fname);
 }
 window.gerarPDF = gerarPDF;
