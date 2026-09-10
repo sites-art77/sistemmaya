@@ -13,6 +13,9 @@ const K = {
   seq: 'maya_seq_v1'
 };
 
+const BACKUP_FORMAT = 'maya-garden-backup';
+const BACKUP_VERSION = 1;
+
 const defaultSettings = {
   company: 'MAYA Garden',
   tagline: 'Jardinagem • Especialista em Orquídeas • Paisagismo',
@@ -31,7 +34,7 @@ const defaultSettings = {
   displacementDefault: 60,
   headerText: 'Orçamento profissional — válido mediante aprovação no prazo.',
   footerText: 'Obrigado pela preferência! MAYA Garden — jardins vivos em Petrópolis.',
-  logoPath: 'assets/maya-garden-logo.jpg',
+  logoPath: 'maya-garden-logo.jpg',
   wmOpacity: 0.09,
   wmSizePct: 60,
   wmEnabled: true
@@ -88,7 +91,7 @@ function load(key, fallback){
 function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
 
 const Store = {
-  get settings(){ const s = load(K.settings, defaultSettings); if(s && s.logoPath==='assets/maya-garden-logo.svg') s.logoPath='assets/maya-garden-logo.jpg'; if(s && s.zapTemplate) s.zapTemplate = String(s.zapTemplate).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu,'').replace(/ {2,}/g,' '); return s; },
+  get settings(){ const s = load(K.settings, defaultSettings); if(s && /^assets\//.test(String(s.logoPath||''))) s.logoPath=String(s.logoPath).replace(/^assets\//,''); if(s && s.zapTemplate) s.zapTemplate = String(s.zapTemplate).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu,'').replace(/ {2,}/g,' '); return s; },
   set settings(v){ save(K.settings, v); },
   get catalog(){ const c = load(K.catalog, defaultCatalog); return Array.isArray(c)&&c.length?c:structuredClone(defaultCatalog); },
   set catalog(v){ save(K.catalog, v); },
@@ -107,6 +110,44 @@ const Store = {
   nextOSNumber(){ let seq=parseInt(localStorage.getItem(K.osseq)||'0',10)+1; localStorage.setItem(K.osseq,String(seq)); const year=new Date().getFullYear(); return `OS-${year}-${String(seq).padStart(4,'0')}`; },
   get packages(){ const p = load(K.packages, defaultPackages); return Array.isArray(p)&&p.length?p:structuredClone(defaultPackages); },
   set packages(v){ save(K.packages, v); },
+  exportBackup(){
+    return {
+      format: BACKUP_FORMAT,
+      version: BACKUP_VERSION,
+      exportedAt: new Date().toISOString(),
+      data: {
+        settings: structuredClone(this.settings),
+        catalog: structuredClone(this.catalog),
+        clients: structuredClone(this.clients),
+        budgets: structuredClone(this.budgets),
+        visits: structuredClone(this.visits),
+        pricing: structuredClone(this.pricing),
+        contracts: structuredClone(this.contracts),
+        packages: structuredClone(this.packages),
+        os: structuredClone(this.os),
+        seq: localStorage.getItem(K.seq) || '0',
+        osseq: localStorage.getItem(K.osseq) || '0'
+      }
+    };
+  },
+  importBackup(payload){
+    if(!payload || payload.format!==BACKUP_FORMAT || Number(payload.version)!==BACKUP_VERSION){
+      throw new Error('Arquivo de backup incompatível.');
+    }
+    const d = payload.data;
+    if(!d || typeof d!=='object') throw new Error('Backup sem dados válidos.');
+    const arrays = ['catalog','clients','budgets','visits','contracts','packages','os'];
+    arrays.forEach(k=>{ if(d[k]!==undefined && !Array.isArray(d[k])) throw new Error(`Dados inválidos em ${k}.`); });
+    if(d.settings!==undefined && (!d.settings || typeof d.settings!=='object' || Array.isArray(d.settings))) throw new Error('Configurações inválidas.');
+    if(d.pricing!==undefined && (!d.pricing || typeof d.pricing!=='object' || Array.isArray(d.pricing))) throw new Error('Tabela de preços inválida.');
+    const put = (key, value)=>{ if(value!==undefined) save(key, value); };
+    put(K.settings, d.settings); put(K.catalog, d.catalog); put(K.clients, d.clients);
+    put(K.budgets, d.budgets); put(K.visits, d.visits); put(K.pricing, d.pricing);
+    put(K.contracts, d.contracts); put(K.packages, d.packages); put(K.os, d.os);
+    if(/^\d+$/.test(String(d.seq||''))) localStorage.setItem(K.seq, String(d.seq));
+    if(/^\d+$/.test(String(d.osseq||''))) localStorage.setItem(K.osseq, String(d.osseq));
+    return {budgets:(d.budgets||[]).length, clients:(d.clients||[]).length, visits:(d.visits||[]).length};
+  },
   uid(){ return 'id-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7); },
   nextNumber(){
     let seq = parseInt(localStorage.getItem(K.seq) || '0', 10) + 1;

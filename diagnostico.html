@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Diagnóstico — MAYA Garden</title>
+<style>
+body{font-family:system-ui,Arial,sans-serif;background:#0C120C;color:#E9F2E9;margin:0;padding:20px}
+.wrap{max-width:640px;margin:0 auto}
+h1{font-size:1.3rem}.card{background:#16211A;border:1px solid #2A4030;border-radius:12px;padding:14px;margin:10px 0}
+.ok{color:#8FD694;font-weight:800}.bad{color:#FF9B9B;font-weight:800}
+.row{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #223428;font-size:.85rem}
+.row:last-child{border:none}
+button{background:#2E7D32;color:#fff;border:none;border-radius:10px;padding:.6rem 1rem;font-weight:700;cursor:pointer}
+a{color:#8FD694}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #2E7D32;border-top-color:#8FD694;border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Diagnóstico — MAYA Garden</h1>
+<p style="color:#9DB8A3;font-size:.85rem">Abra esta página no endereço com problema e aguarde o teste terminar.</p>
+<div class="card"><b>Status:</b> <span id="st"><span class="spin"></span> testando…</span></div>
+<div class="card"><b>Ambiente</b><div id="env"></div></div>
+<div class="card"><b>Arquivos (rede)</b><div id="files"></div></div>
+<div class="card"><b>Navegador</b><div id="feat"></div></div>
+<div class="card"><button onclick="copyRep()">Copiar relatório</button>
+<a href="./" style="margin-left:12px">← Voltar ao sistema</a>
+<pre id="rep" style="white-space:pre-wrap;font-size:.75rem;color:#9DB8A3"></pre></div>
+</div>
+<script>
+(function(){
+var out=[];
+function log(ok,msg){out.push((ok?'PASS':'FAIL')+' '+msg);render();return ok;}
+function render(){document.getElementById('rep').textContent=out.join('\n');}
+function row(host,html){var d=document.createElement('div');d.className='row';d.innerHTML=html;host.appendChild(d);}
+var env=document.getElementById('env'), files=document.getElementById('files'), feat=document.getElementById('feat');
+row(env,'<span>Endereço</span><span>'+location.href.slice(0,80)+'</span>');
+row(env,'<span>Protocolo</span><span>'+location.protocol+'</span>');
+var list=['./','index.html','styles.css','fallback.css','store.js','pricing.js','pdf.js','app.js','pro.js','gsap.min.js','jspdf.umd.min.js','maya-garden-logo.jpg','icon-192.png','icon-512.png','manifest.json','sw.js'];
+var chain=Promise.resolve(), fails=0;
+list.forEach(function(f){
+  chain=chain.then(function(){
+    return fetch(f,{cache:'no-store'}).then(function(r){
+      return r.text().then(function(t){
+        var ok=r.ok&&t.length>100;
+        if(!ok)fails++;
+        row(files,'<span>'+f+'</span><span class="'+(ok?'ok':'bad')+'">'+(ok?('OK '+(t.length/1024).toFixed(1)+'kb'):('ERRO '+r.status))+'</span>');
+        log(ok,f+' http '+r.status);
+      });
+    }).catch(function(e){fails++;row(files,'<span>'+f+'</span><span class="bad">FALHA REDE</span>');log(false,f+' rede');});
+  });
+});
+chain.then(function(){
+  try{localStorage.setItem('__t','1');localStorage.removeItem('__t');
+    row(feat,'<span>Armazenamento local</span><span class="ok">OK</span>');log(true,'localStorage');}
+  catch(e){row(feat,'<span>Armazenamento local</span><span class="bad">BLOQUEADO</span>');log(false,'localStorage');fails++;}
+  var tw=document.createElement('div');tw.className='hidden';document.body.appendChild(tw);
+  var twOk=getComputedStyle(tw).display==='none';tw.remove();
+  row(feat,'<span>Tailwind CSS</span><span class="'+(twOk?'ok':'bad')+'">'+(twOk?'OK':'FALLBACK LOCAL')+'</span>');log(true,'tailwind '+(twOk?'cdn':'fallback'));
+  row(feat,'<span>GSAP (animações)</span><span class="'+(window.gsap?'ok':'bad')+'">'+(window.gsap?'OK':'opcional ausente')+'</span>');
+  if('serviceWorker' in navigator){row(feat,'<span>Service Worker</span><span class="ok">suportado</span>');
+    navigator.serviceWorker.getRegistration().then(function(r){row(feat,'<span>SW registrado</span><span class="'+(r?'ok':'bad')+'">'+(r?'SIM':'NÃO')+'</span>');});}
+  else row(feat,'<span>Service Worker</span><span class="bad">não suportado</span>');
+  var s=document.getElementById('st');
+  s.innerHTML=fails?'<span class="bad">'+fails+' problema(s) — copie o relatório e envie ao suporte.</span>':'<span class="ok">Tudo certo por aqui. Se o sistema não abre, veja a tela inicial.</span>';
+});
+window.copyRep=function(){var t=document.getElementById('rep').textContent+'\nURL: '+location.href+'\nNAV: '+navigator.userAgent;
+  if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){alert('Relatório copiado!');});};
+})();
+</script>
+</body>
+</html>

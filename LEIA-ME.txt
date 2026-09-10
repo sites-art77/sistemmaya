@@ -13,3 +13,26 @@ MAYA GARDEN PRO — COMO PUBLICAR (2 minutos)
 
 Funciona em Android, iPhone e computador, inclusive offline após a 1ª visita.
 Dúvidas? Fale com quem fez o sistema.
+
+BACKUP DOS DADOS
+================
+Como os dados ficam salvos no navegador, abra Configurações > Backup dos dados
+e clique em "Baixar backup" regularmente. Para levar o sistema a outro aparelho,
+use "Restaurar backup" e selecione o arquivo .json salvo.
+
+SE NÃO CARREGAR (tela em branco / 404 / travado no "Carregando")
+================================================================
+1. Primeiro abra no ar: https://SEU-USUARIO.github.io/maya-garden/diagnostico.html
+   Ele testa tudo sozinho e diz o que falhou. Copie o relatório (botão).
+2. Causas mais comuns e solução:
+   a) Esqueceu a pasta .github (ela é oculta): sem ela o deploy não roda.
+      Reenvie marcando "Itens ocultos" no Explorer ou use GitHub Desktop.
+      Em Settings > Pages > Actions deve existir um deploy verde.
+   b) Subiu a PASTA em vez do CONTEÚDO: o index.html precisa ficar na raiz
+      do repositório (fora de qualquer subpasta).
+   c) Repositório Private em conta grátis: Pages exige repositório Public.
+   d) Tela branca/travada: abra com Ctrl+F5 (limpa cache) e veja se aparece
+      faixa vermelha de erro no topo — anote o texto.
+   e) Internet bloqueando o Tailwind (CDN): o sistema liga um CSS reserva
+      sozinho, mas confira no diagnóstico a linha "Tailwind CSS".
+3. Cada nova subida pode exigir 1 Ctrl+F5 para largar o cache antigo.

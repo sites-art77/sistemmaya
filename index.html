@@ -14,25 +14,32 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.json"/>
-<link rel="apple-touch-icon" href="assets/maya-garden-logo.jpg"/>
-<link rel="icon" href="assets/maya-garden-logo.jpg"/>
+<link rel="apple-touch-icon" href="maya-garden-logo.jpg"/>
+<link rel="icon" href="maya-garden-logo.jpg"/>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="css/styles.css"/>
-<script src="js/vendor/gsap.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js';document.head.appendChild(s)"></script>
-<script src="js/vendor/jspdf.umd.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';document.head.appendChild(s)"></script>
+<link rel="stylesheet" href="styles.css?v=6"/>
+<script src="gsap.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js';document.head.appendChild(s)"></script>
+<script src="jspdf.umd.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';document.head.appendChild(s)"></script>
 <script>
 window.__mayaErr=[];
-window.onerror=function(m,s,l,c){window.__mayaErr.push(m+' @'+(s||'').split('/').pop()+':'+l);var d=document.getElementById('errbox');if(d){d.style.display='block';d.textContent='Erro: '+window.__mayaErr.join(' | ');}};
+function __mayaShowErr(m){window.__mayaErr.push(m);var d=document.getElementById('errbox');if(d){d.style.display='block';d.textContent='Erro: '+window.__mayaErr.join(' | ').slice(0,400);}}
+window.onerror=function(m,s,l,c){__mayaShowErr(m+' @'+String(s||'').split('/').pop()+':'+l);};
+window.addEventListener('unhandledrejection',function(e){__mayaShowErr('Falha: '+String((e&&e.reason&&e.reason.message)||e.reason||e).slice(0,120));});
+window.addEventListener('DOMContentLoaded',function(){
+  try{var t=document.createElement('div');t.className='hidden';t.style.position='absolute';document.body.appendChild(t);
+  var ok=getComputedStyle(t).display==='none';t.remove();
+  if(!ok){var l=document.createElement('link');l.rel='stylesheet';l.href='fallback.css';document.head.appendChild(l);}}catch(e){}
+});
 </script>
 </head>
 <body>
-<div id="errbox" style="display:none;background:#a11a1a;color:#fff;padding:10px;font:700 13px sans-serif"></div>
+<div id="errbox" role="alert" aria-live="assertive" style="display:none;background:#a11a1a;color:#fff;padding:10px;font:700 13px sans-serif"></div>
 <div id="app"><div class="max-w-6xl mx-auto p-8 text-center">Carregando MAYA Garden…</div></div>
-<script src="js/store.js"></script>
-<script src="js/pricing.js"></script>
-<script src="js/pdf.js"></script>
-<script src="js/app.js"></script>
-<script src="js/pro.js"></script>
+<script src="store.js?v=6"></script>
+<script src="pricing.js?v=6"></script>
+<script src="pdf.js?v=6"></script>
+<script src="app.js?v=6"></script>
+<script src="pro.js?v=6"></script>
 <script>if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
 <script>window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window._pwaPrompt=e;});</script>
 </body>

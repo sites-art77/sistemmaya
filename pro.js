@@ -116,10 +116,10 @@ function dashProHTML(){
   </div>
   <div class="maya-card p-4 mt-3 anim-in">
     <div class="flex items-center gap-2 flex-wrap"><h2 class="font-extrabold">Banco de dados local</h2>
-    <span class="maya-badge b-aprovado">salvamento automático</span><div class="flex-1"></div>
+    <span class="maya-badge b-aprovado">armazenamento local</span><div class="flex-1"></div>
     <span class="text-xs font-bold" id="spacetext" style="color:var(--muted)">calculando espaço…</span></div>
     <div class="p-track mt-2"><div class="p-bar" id="spacefill" style="width:2%"></div></div>
-    <p class="text-xs mt-1" style="color:var(--muted)">Tudo fica guardado neste navegador, funciona offline e sobe junto com o site. Nada se perde ao fechar.</p>
+    <p class="text-xs mt-1" style="color:var(--muted)">Tudo fica guardado neste navegador e funciona offline. Para trocar de aparelho, use o backup em Configurações.</p>
   </div>`;
 }
 function dashAfter(){

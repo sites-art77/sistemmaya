@@ -12,7 +12,7 @@ let CalcSel = null; // índice do item recebendo dica
 
 function toast(msg){
   let w = document.getElementById('toasts');
-  if(!w){ w = document.createElement('div'); w.id='toasts'; document.body.appendChild(w); }
+  if(!w){ w = document.createElement('div'); w.id='toasts'; w.setAttribute('role','status'); w.setAttribute('aria-live','polite'); document.body.appendChild(w); }
   try{ while(w.children && w.children.length>=3) w.firstChild.remove(); }catch(e){}
   const t = document.createElement('div');
   t.className = 'toast';
@@ -39,6 +39,11 @@ function countUp(el, val, fmt){
 /* ---------- cálculos ---------- */
 function recalcDraft(){
   if(!Draft) return;
+  Draft.discount = Math.max(0, Number(Draft.discount)||0);
+  Draft.discountType = Draft.discountType==='vlr' ? 'vlr' : 'pct';
+  if(Draft.discountType==='pct') Draft.discount = Math.min(100, Draft.discount);
+  Draft.displacement = Math.max(0, Number(Draft.displacement)||0);
+  Draft.signalPct = Math.min(100, Math.max(0, Number(Draft.signalPct)||0));
   Draft.subtotal = (Draft.items||[]).reduce((s,it)=>s+(Number(it.qty)||0)*(Number(it.unit)||0),0);
   const d = Number(Draft.discount||0);
   Draft.discountVal = Draft.discountType==='pct' ? Draft.subtotal*d/100 : d;
@@ -93,14 +98,15 @@ function transitionTo(){
   const to = location.hash || '#/';
   const from = window._lastRoute || '#/';
   const inEd = h=>h.startsWith('#/novo')||h.startsWith('#/editar/');
-  if(window._dirty && inEd(from) && !inEd(to) && Draft && (String(Draft.client?.name||'').trim() || (Draft.items||[]).some(it=>String(it.desc||'').trim()||Number(it.unit)>0))){
+  if(window._dirty && inEd(from) && from!==to && Draft && (String(Draft.client?.name||'').trim() || (Draft.items||[]).some(it=>String(it.desc||'').trim()||Number(it.unit)>0))){
     window._navigating = true; location.hash = from;
     confirmModal('Sair sem salvar?','Há alterações não salvas neste orçamento.').then(ok=>{
       window._navigating = false;
-      if(ok){ window._dirty=false; if((location.hash||'#/')!==to) location.hash=to; else render(); }
+      if(ok){ window._dirty=false; Draft=null; if((location.hash||'#/')!==to) location.hash=to; else render(); }
     });
     return;
   }
+  if(inEd(from) && from!==to && !window._dirty) Draft=null;
   const main = document.querySelector('main');
   navProgStart();
   const dir = orderIdx(to)>=orderIdx(from) ? 1 : -1;
@@ -127,14 +133,14 @@ function shell(active, html){
   return `
   <div class="bg-fx" aria-hidden="true"><i></i><i></i><i></i></div>
   <aside class="side no-print">
-    <div class="side-brand"><img src="${logo}" onerror="this.onerror=null;this.src='assets/maya-garden-logo.jpg'" alt="MAYA"/><div><div class="font-black font-display" style="font-size:1.05rem">MAYA Garden</div><div style="font-size:.68rem;color:var(--muted)">Petrópolis • RJ</div></div></div>
+    <div class="side-brand"><img src="${logo}" onerror="this.onerror=null;this.src='maya-garden-logo.jpg'" alt="MAYA"/><div><div class="font-black font-display" style="font-size:1.05rem">MAYA Garden</div><div style="font-size:.68rem;color:var(--muted)">Petrópolis • RJ</div></div></div>
     ${sideGroup('PRINCIPAL',NAV_MAIN)}${sideGroup('GESTÃO',NAV_MGMT)}${sideGroup('SISTEMA',NAV_SYS)}
-    <div class="side-foot"><div class="flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full" style="background:#4CAF50;box-shadow:0 0 8px #4CAF50"></span><b class="text-xs">Salvamento automático</b></div><div class="mt-1">Dados guardados neste navegador</div></div>
+    <div class="side-foot"><div class="flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full" style="background:#4CAF50;box-shadow:0 0 8px #4CAF50"></span><b class="text-xs">Dados protegidos neste aparelho</b></div><div class="mt-1">Salve o orçamento e faça backup em Configurações.</div></div>
   </aside>
   <div class="with-side">
   <div class="maya-header no-print">
     <div class="max-w-6xl mx-auto px-4 py-4 flex items-center gap-3">
-      <img src="${logo}" onerror="this.onerror=null;this.src='assets/maya-garden-logo.jpg'" class="w-12 h-12 rounded-xl bg-white p-1 object-contain lg:hidden" alt="MAYA"/>
+      <img src="${logo}" onerror="this.onerror=null;this.src='maya-garden-logo.jpg'" class="w-12 h-12 rounded-xl bg-white p-1 object-contain lg:hidden" alt="MAYA"/>
       <div class="flex-1">
         <div class="font-black text-xl leading-none font-display">MAYA Garden</div>
         <div class="text-xs opacity-90">Jardinagem • Orquídeas • Paisagismo — Petrópolis-RJ</div>
@@ -322,8 +328,8 @@ function itemRow(it, i){
       <label class="text-[11px] font-bold">Und<input class="maya-input" value="${esc(it.unitLabel||it.unit||'un')}" oninput="editItem(${i},'unitLabel',this.value)" placeholder="m²/hora/un"></label>
       <label class="text-[11px] font-bold">Valor unit R$<input type="number" step="any" class="maya-input" value="${esc(it.unit)}" oninput="editItem(${i},'unit',this.value)"></label>
       <div class="flex items-end gap-1">
-        <button class="maya-btn-ghost text-xs px-2 py-2" title="Dica de preço p/ este item" onclick="openCalc(${i})">Dica</button>
-        <button class="maya-btn-ghost text-xs px-2 py-2" title="Remover" onclick="delItem(${i})">Excluir</button>
+        <button class="maya-btn-ghost text-xs px-2 py-2" title="Dica de preço p/ este item" aria-label="Dica de preço para este item" onclick="openCalc(${i})">Dica</button>
+        <button class="maya-btn-ghost text-xs px-2 py-2" title="Remover" aria-label="Remover item" onclick="delItem(${i})">Excluir</button>
       </div>
     </div>
     <div class="text-right text-sm font-bold mt-1">Sub: <span class="row-sub">${brl((Number(it.qty)||0)*(Number(it.unit)||0))}</span></div>
@@ -452,7 +458,7 @@ function paintPreviewOnly(){
   box.innerHTML = `
     <div class="pp-ribbon">PROPOSTA COMERCIAL</div>
     <div class="pp-head">
-      <img src="${esc(st.logoPath)}" onerror="this.onerror=null;this.src='assets/maya-garden-logo.jpg'" class="pp-logo" alt="MAYA"/>
+      <img src="${esc(st.logoPath)}" onerror="this.onerror=null;this.src='maya-garden-logo.jpg'" class="pp-logo" alt="MAYA"/>
       <div class="flex-1"><div class="pp-co">${esc(st.company)}</div>
       <div class="pp-tag">${esc(st.tagline)}</div>
       <div class="pp-tag" style="color:#666">${esc(st.address)} • Whats ${esc(st.whatsappDisplay)} • ${esc(st.instagram)}</div></div>
@@ -554,7 +560,7 @@ window.closeDrawer = ()=>{
 let __mRes = null;
 function openModal(title, bodyHTML, onOk, okLabel){
   const root = document.querySelector('#modal-root');
-  root.innerHTML = `<div class="modal-bg show" id="m-bg"></div><div class="m-modal" id="m-box" role="dialog" aria-label="${esc(title)}">
+  root.innerHTML = `<div class="modal-bg show" id="m-bg"></div><div class="m-modal" id="m-box" role="dialog" aria-modal="true" aria-label="${esc(title)}">
     <h3>${esc(title)}</h3><div class="m-body">${bodyHTML}</div><div class="m-err" id="m-err"></div>
     <div class="m-foot"><button class="maya-btn-ghost" id="m-cancel">Cancelar</button><button class="maya-btn" id="m-ok">${esc(okLabel||'Salvar')}</button></div></div>`;
   const done = v=>{ __mRes=null; const r=document.querySelector('#modal-root'); if(r) r.innerHTML=''; if(__mCb) { const cb=__mCb; __mCb=null; cb(v); } };
@@ -816,6 +822,7 @@ function viewConfig(){
   const st=Store.settings, p=Store.pricing;
   return `<h1 class="text-2xl font-black mb-3 anim-in">Config — tudo editável</h1>
   <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Instalar como aplicativo</b><div class="text-xs" style="color:var(--muted)">Acesso direto na tela inicial do celular, funciona offline.</div></div><button class="maya-btn text-sm" onclick="installApp()">Instalar app</button></div></div>
+  <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Backup dos dados</b><div class="text-xs" style="color:var(--muted)">Os dados ficam neste navegador. Baixe uma cópia antes de trocar de aparelho ou limpar o navegador.</div></div><button class="maya-btn-ghost text-sm" onclick="exportBackup()">Baixar backup</button><label class="maya-btn text-sm cursor-pointer">Restaurar backup<input id="backup-file" type="file" accept="application/json,.json" class="hidden" onchange="importBackupFile(this)"></label></div><div id="backup-status" class="text-xs mt-2" style="color:var(--muted)">Backup inclui orçamentos, clientes, agenda, contratos, catálogo e configurações.</div></div>
   <div class="grid lg:grid-cols-2 gap-3">
   <div class="maya-card p-4 anim-in" style="opacity:1"><h2 class="font-extrabold mb-2">Empresa (sai no PDF)</h2>
     <div class="grid grid-cols-2 gap-2 text-sm">
@@ -852,6 +859,32 @@ window.saveSettings=()=>{
 };
 window.savePricing=()=>{ const p=Store.pricing; $$('[id^="p-"]').forEach(i=>{ p[i.id.slice(2)]=Number(i.value)||0; }); Store.pricing=p; toast('Tabela salva!'); };
 
+/* ---------- backup local ---------- */
+window.exportBackup=()=>{
+  try{
+    const payload=JSON.stringify(Store.exportBackup(), null, 2);
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([payload],{type:'application/json'}));
+    a.download=`maya-garden-backup-${todayISO()}.json`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    toast('Backup baixado!');
+  }catch(e){ toast('Não foi possível criar o backup.'); }
+};
+window.importBackupFile=async input=>{
+  const file=input?.files?.[0]; if(!file) return;
+  try{
+    const payload=JSON.parse(await file.text());
+    const ok=await confirmModal('Restaurar backup','Isso substituirá os dados atuais deste navegador. Faça um backup atual antes de continuar.','Restaurar');
+    if(!ok) return;
+    const r=Store.importBackup(payload);
+    Draft=null; window._dirty=false; location.hash='#/';
+    if(currentRoute()==='#/') render();
+    toast(`Backup restaurado: ${r.budgets} orçamento(s), ${r.clients} cliente(s).`);
+  }catch(e){ toast((e&&e.message)||'Arquivo de backup inválido.'); }
+  finally{ input.value=''; }
+};
+
 /* ---------- salvamento automático (navegador) ---------- */
 function storageInfo(){ try{
     let bytes=0; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); const v=localStorage.getItem(k)||''; bytes+=(k.length+v.length)*2; }
@@ -860,6 +893,9 @@ function storageInfo(){ try{
 
 function bootMaya(){ try{ render(); sidebarIntroOnce(); }catch(e){ var d=document.getElementById('errbox'); if(d){ d.style.display='block'; d.textContent='Erro ao abrir: '+(e&&e.message||e); } console.error(e); } }
 function sidebarIntroOnce(){ if(window.__booted) return; }
+window.addEventListener('beforeunload', function(e){
+  if(window._dirty && /^#\/(novo|editar\/)\b/.test(currentRoute())){ e.preventDefault(); e.returnValue=''; }
+});
 if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', bootMaya); } else { bootMaya(); }
 // watchdog: se o placeholder persistir, tenta de novo (ex: script adiado)
 setTimeout(function(){ var a=document.getElementById('app'); if(a && a.textContent.indexOf('Carregando MAYA')>=0){ bootMaya(); } }, 1200);
