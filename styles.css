@@ -199,6 +199,24 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
 @media(max-width:340px){
   .maya-header .topnav.mobile-open{grid-template-columns:1fr}
 }
+/* ---- editor de orçamento responsivo ---- */
+.budget-editor-actions{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.budget-editor-actions button{white-space:nowrap}
+@media(max-width:1023px){
+  .budget-editor-top{align-items:flex-start!important}
+  .budget-editor-top h1{flex:1 0 100%;min-width:0;font-size:clamp(1.3rem,5vw,1.75rem);line-height:1.1;overflow-wrap:anywhere}
+  .budget-editor-top > .flex-1{display:none}
+  .budget-editor-actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
+  .budget-editor-actions button{width:100%;min-height:44px}
+  .budget-editor .grid.grid-cols-2,
+  .budget-editor .grid.grid-cols-3{grid-template-columns:minmax(0,1fr)!important}
+  .budget-editor .grid.grid-cols-2 > .col-span-2{grid-column:1 / -1}
+  .budget-editor label{min-width:0}
+  .budget-editor input,.budget-editor select,.budget-editor textarea{min-width:0}
+}
+@media(max-width:420px){
+  .budget-editor-actions{grid-template-columns:1fr}
+}
 /* ---- paleta de comando (Ctrl+K) ---- */
 .pal-box{position:fixed;z-index:75;left:50%;top:12vh;transform:translateX(-50%);width:min(560px,93vw);
   background:#141E16;border:1px solid #33513a;border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.65);overflow:hidden}

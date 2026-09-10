@@ -193,6 +193,14 @@
     if(error){ setStatus('Não foi possível carregar os acessos.',accessErrorMessage(error)); return []; }
     managedUsers=data||[]; emit(); return managedUsers;
   }
+  async function adminRequest(payload){
+    const current=await client.auth.getSession();
+    const token=current?.data?.session?.access_token||'';
+    const response=await fetch(ADMIN_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify(payload)});
+    const body=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(body.error||body.message||`Falha HTTP ${response.status}`);
+    return body;
+  }
   async function createManagedUser(){
     if(!isAdmin()){ say('Somente o administrador pode criar acessos.'); return; }
     const username=normalizeUsername(document.getElementById('adm-username')?.value||'');
@@ -203,11 +211,7 @@
     if(!['admin','empresa','visitante'].includes(role)){ say('Perfil inválido.'); return; }
     syncing=true; setStatus('Criando acesso…');
     try{
-      const current=await client.auth.getSession();
-      const token=current?.data?.session?.access_token||'';
-      const response=await fetch(ADMIN_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({username,password,role,expires_at:expiry?new Date(expiry+'T23:59:59').toISOString():null})});
-      const body=await response.json().catch(()=>({}));
-      if(!response.ok) throw new Error(body.error||body.message||`Falha HTTP ${response.status}`);
+      await adminRequest({action:'create',username,password,role,expires_at:expiry?new Date(expiry+'T23:59:59').toISOString():null});
       setStatus(`Acesso ${username} criado como ${roleLabel(role)}.`); say('Novo acesso criado!');
       const u=document.getElementById('adm-username'), p=document.getElementById('adm-password'); if(u) u.value=''; if(p) p.value='';
       await refreshManagedUsers();
@@ -222,10 +226,11 @@
     const expiry=document.getElementById('adm-edit-expiry-'+userId)?.value||'';
     if(userId===user?.id && (!active || role!=='admin')){ say('O administrador não pode remover o próprio acesso administrativo.'); return; }
     syncing=true;
-    const {error}=await client.from(ACCESS_TABLE).update({role,active,expires_at:expiry?new Date(expiry+'T23:59:59').toISOString():null,updated_at:new Date().toISOString()}).eq('user_id',userId);
-    syncing=false;
-    if(error){ say(accessErrorMessage(error)); return; }
-    await refreshManagedUsers(); say('Acesso atualizado.');
+    try{
+      await adminRequest({action:'update',user_id:userId,role,active,expires_at:expiry?new Date(expiry+'T23:59:59').toISOString():null});
+      await refreshManagedUsers(); say(active?'Acesso atualizado.':'Acesso bloqueado.');
+    }catch(error){ setStatus('Não foi possível atualizar o acesso.',accessErrorMessage(error)); say(accessErrorMessage(error)); }
+    finally{ syncing=false; emit(); }
   }
 
   function authGateHtml(){

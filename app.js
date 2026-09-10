@@ -258,13 +258,16 @@ function statusOpts(s){ return ['pendente','aprovado','recusado','expirado'].map
 function viewEditor(isEdit){
   const d = Draft; const st = Store.settings;
   return `
-  <div class="flex items-center gap-2 mb-3 flex-wrap anim-in">
+  <div class="budget-editor">
+  <div class="budget-editor-top flex items-center gap-2 mb-3 flex-wrap anim-in">
     <h1 class="text-2xl font-black">${isEdit?'Editar':'Novo'} orçamento <span class="text-[#1A5D1A]">Nº ${esc(d.number)}</span></h1>
     <span class="maya-badge b-${d.status}">${d.status}</span>
     <div class="flex-1"></div>
-    <button class="maya-btn-ghost" onclick="location.hash='#/orcamentos'">← Voltar</button>
-    <button class="maya-btn" onclick="saveDraft(${isEdit})">Salvar</button>
-    <button class="maya-btn-ghost" onclick="doPDF()">Baixar PDF</button>
+    <div class="budget-editor-actions">
+      <button class="maya-btn-ghost" onclick="location.hash='#/orcamentos'">← Voltar</button>
+      <button class="maya-btn" onclick="saveDraft(${isEdit})">Salvar</button>
+      <button class="maya-btn-ghost" onclick="doPDF()">Baixar PDF</button>
+    </div>
   </div>
 
   <div class="grid lg:grid-cols-2 gap-3">
@@ -347,6 +350,7 @@ function viewEditor(isEdit){
       <button class="maya-btn-ghost" onclick="openZapDraft()">Abrir WhatsApp</button>
       <button class="maya-btn-ghost" onclick="printOSDraft()">Ordem de serviço</button>
     </div>
+  </div>
   </div>`;
 }
 
