@@ -113,6 +113,11 @@ async function gerarPDF(budget){
   if(y > H-70){ doc.addPage(); y=34; }
   // valor final apresentado ao cliente; os cálculos internos não são expostos no PDF
   const rx = W-M-76;
+  if(Number(budget.displacement)>0){
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(70,70,70);
+    doc.text(`Taxa de deslocamento: ${brlPDF(budget.displacement)}`, rx, y);
+    y += 5.5;
+  }
   doc.setFillColor(232,244,233);
   doc.setDrawColor(180,214,184);
   doc.roundedRect(rx-5, y-5, 81, 15, 2.5, 2.5, 'FD');
