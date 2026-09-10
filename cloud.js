@@ -234,9 +234,10 @@
   }
 
   function authGateHtml(){
-    if(loading) return '<div class="maya-login-card"><div class="maya-login-mark">M</div><h1>Conectando ao MAYA Garden</h1><p>Verificando o acesso seguro…</p></div>';
-    if(!ready) return `<div class="maya-login-card"><div class="maya-login-mark">!</div><h1>Sistema indisponível</h1><p>${escCloud(status)}</p><button class="maya-btn" onclick="location.reload()">Tentar novamente</button></div>`;
-    return `<div class="maya-login-card"><div class="maya-login-mark">M</div><h1>MAYA Garden</h1><p class="maya-login-sub">Acesso online protegido</p><form onsubmit="event.preventDefault();cloudAuthSignIn()"><label class="font-bold text-sm">Usuário<input id="auth-username" class="maya-input mt-1" autocomplete="username" placeholder="seu usuário"></label><label class="font-bold text-sm mt-3">Senha<input id="auth-password" type="password" class="maya-input mt-1" autocomplete="current-password" placeholder="sua senha"></label><button class="maya-btn w-full mt-4" type="submit">Entrar no sistema</button></form><p class="maya-login-status">${escCloud(status)}</p><p class="maya-login-note">É necessário estar conectado à internet para usar o sistema.</p></div>`;
+    const loginLogo='<img src="maya-garden-logo.jpg" alt="MAYA Garden" class="maya-login-logo-img">';
+    if(loading) return `<div class="maya-login-card"><div class="maya-login-mark maya-login-logo">${loginLogo}</div><h1>Conectando ao MAYA Garden</h1><p>Verificando o acesso seguro…</p></div>`;
+    if(!ready) return `<div class="maya-login-card"><div class="maya-login-mark maya-login-logo">${loginLogo}</div><h1>Sistema indisponível</h1><p>${escCloud(status)}</p><button class="maya-btn" onclick="location.reload()">Tentar novamente</button></div>`;
+    return `<div class="maya-login-card"><div class="maya-login-mark maya-login-logo">${loginLogo}</div><h1>MAYA Garden</h1><p class="maya-login-sub">Acesso online protegido</p><form onsubmit="event.preventDefault();cloudAuthSignIn()"><label class="font-bold text-sm">Usuário<input id="auth-username" class="maya-input mt-1" autocomplete="username" placeholder="seu usuário"></label><label class="font-bold text-sm mt-3">Senha<input id="auth-password" type="password" class="maya-input mt-1" autocomplete="current-password" placeholder="sua senha"></label><button class="maya-btn w-full mt-4" type="submit">Entrar no sistema</button></form><p class="maya-login-status">${escCloud(status)}</p><p class="maya-login-note">É necessário estar conectado à internet para usar o sistema.</p></div>`;
   }
   function accountHtml(){
     if(!authenticated()) return '<div class="text-sm" style="color:#9a2c2c">Sessão não autenticada.</div>';
