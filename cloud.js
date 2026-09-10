@@ -19,6 +19,7 @@
   let remoteUpdatedAt = '';
   let pushTimer = null;
   let managedUsers = [];
+  let sessionVersion = 0;
 
   const escCloud = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const roleLabel = role => ({admin:'Administrador',empresa:'Empresa',visitante:'Visitante'}[role] || role || 'Sem perfil');
@@ -76,9 +77,11 @@
     const result = await client.from(ACCESS_TABLE).select('user_id,username,display_name,role,active,expires_at,created_at,updated_at').eq('user_id',nextUser.id).maybeSingle();
     return result;
   }
-  async function loadWorkspace(){
+  async function loadWorkspace(version){
+    if(version !== undefined && version !== sessionVersion) return {ok:false,stale:true};
     if(!authenticated()) return {ok:false};
     const {data,error}=await client.from(DATA_TABLE).select('data,updated_at,updated_by').eq('workspace_id',WORKSPACE_ID).maybeSingle();
+    if(version !== undefined && version !== sessionVersion) return {ok:false,stale:true};
     if(error){ setStatus('Conta conectada, mas os dados não puderam ser carregados.',accessErrorMessage(error)); return {ok:false,error}; }
     remoteUpdatedAt=data?.updated_at||'';
     if(data?.data && window.Store){
@@ -89,16 +92,19 @@
       }catch(error){ setStatus('A cópia da nuvem está inválida.',accessErrorMessage(error)); return {ok:false,error}; }
       finally{ window.__mayaAuthSyncing=false; }
     }
-    if(data) setStatus(`Conectado como ${profile.display_name||profile.username}. Última atualização: ${fmtDateTime(data.updated_at)}.`);
-    else setStatus(`Conectado como ${profile.display_name||profile.username}. Ainda não há dados na nuvem.`);
+    const displayName = profile?.display_name || profile?.username || user?.email || 'usuário';
+    if(data) setStatus(`Conectado como ${displayName}. Última atualização: ${fmtDateTime(data.updated_at)}.`);
+    else setStatus(`Conectado como ${displayName}. Ainda não há dados na nuvem.`);
     return {ok:true,row:data||null};
   }
   async function applySession(nextSession){
+    const version = ++sessionVersion;
     user=nextSession?.user||null;
     profile=null;
     remoteUpdatedAt='';
     if(!user){ clearLocalCache(); setStatus(ready?'Faça login para acessar o sistema.':'Conectando ao sistema…'); emit(); return; }
     const result=await loadProfile(user);
+    if(version !== sessionVersion) return;
     if(result.error || !result.data){
       clearLocalCache();
       setStatus('Esta conta ainda não recebeu um perfil de acesso.',accessErrorMessage(result.error));
@@ -106,13 +112,15 @@
       return;
     }
     profile=result.data;
+    if(version !== sessionVersion) return;
     if(!isNotExpired(profile)){
       clearLocalCache();
       setStatus(profile.active===false?'Este acesso está desativado.':'Este acesso expirou.');
       try{ await client.auth.signOut(); }catch(e){}
       return;
     }
-    await loadWorkspace();
+    await loadWorkspace(version);
+    if(version !== sessionVersion) return;
     if(isAdmin()) await refreshManagedUsers();
     emit();
   }
@@ -139,12 +147,13 @@
     syncing=false;
     if(error){ setStatus(accessErrorMessage(error),error.message); say(accessErrorMessage(error)); return; }
     await applySession(data?.session||null);
-    if(authenticated()) say(`Bem-vindo, ${profile.display_name||profile.username}!`);
+    if(authenticated()) say(`Bem-vindo, ${profile?.display_name||profile?.username||user?.email||'usuário'}!`);
   }
   async function signOut(){
     if(!client) return;
     syncing=true;
     try{ await client.auth.signOut(); }catch(error){ setStatus('Não foi possível sair.',accessErrorMessage(error)); }
+    sessionVersion++;
     syncing=false; user=null; profile=null; managedUsers=[]; clearLocalCache(); setStatus('Você saiu do sistema.'); emit();
   }
   async function pushLocal(ask){
@@ -227,7 +236,8 @@
   function accountHtml(){
     if(!authenticated()) return '<div class="text-sm" style="color:#9a2c2c">Sessão não autenticada.</div>';
     const expiry=profile.expires_at?`Acesso até ${fmtDateTime(profile.expires_at)}.`:'Acesso sem data de expiração.';
-    return `<div class="flex items-start gap-3 flex-wrap"><div class="flex-1"><b style="color:var(--maya-accent)">${escCloud(profile.display_name||profile.username)}</b><div class="text-sm" style="color:var(--muted)">Usuário: ${escCloud(profile.username)} • Perfil: ${escCloud(roleLabel(profile.role))}<br>${expiry}</div></div><button class="maya-btn-ghost text-sm maya-session-action" onclick="cloudAuthSignOut()">Sair</button></div><div class="flex gap-2 mt-3 flex-wrap"><button class="maya-btn text-sm maya-session-action" onclick="cloudSyncPull()">Atualizar dados</button>${canWrite()?'<button class="maya-btn-ghost text-sm" onclick="cloudSyncPush(true)">Salvar dados agora</button>':''}</div><div class="text-xs mt-2" style="color:var(--muted)">${escCloud(status)}</div>`;
+    const displayName = profile?.display_name || profile?.username || user?.email || 'usuário';
+    return `<div class="flex items-start gap-3 flex-wrap"><div class="flex-1"><b style="color:var(--maya-accent)">${escCloud(displayName)}</b><div class="text-sm" style="color:var(--muted)">Usuário: ${escCloud(profile?.username||'')} • Perfil: ${escCloud(roleLabel(profile?.role))}<br>${expiry}</div></div><button class="maya-btn-ghost text-sm maya-session-action" onclick="cloudAuthSignOut()">Sair</button></div><div class="flex gap-2 mt-3 flex-wrap"><button class="maya-btn text-sm maya-session-action" onclick="cloudSyncPull()">Atualizar dados</button>${canWrite()?'<button class="maya-btn-ghost text-sm" onclick="cloudSyncPush(true)">Salvar dados agora</button>':''}</div><div class="text-xs mt-2" style="color:var(--muted)">${escCloud(status)}</div>`;
   }
   function adminHtml(){
     if(!isAdmin()) return '<div class="maya-card p-4"><b>Acesso restrito</b><p class="text-sm mt-1">Esta área é exclusiva do administrador.</p></div>';

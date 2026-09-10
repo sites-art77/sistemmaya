@@ -162,6 +162,10 @@ input[type="date"]::-webkit-calendar-picker-indicator{cursor:pointer}
 .sec-title{font-family:'Fraunces',serif;font-weight:700;font-size:1.05rem}
 .empty{border:2px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--muted)}
 .topbar-cta span.cta-sub{display:none}
+.mobile-menu-toggle{display:none;align-items:center;justify-content:center;gap:.35rem;border:1px solid rgba(255,255,255,.28);background:rgba(0,0,0,.16);color:#fff;border-radius:11px;padding:.55rem .65rem;font-weight:800;line-height:1;cursor:pointer;flex-shrink:0}
+.mobile-menu-toggle span:first-child{font-size:1.1rem}
+.mobile-menu-label{font-size:.72rem}
+.maya-header .topnav{display:flex}
 /* ---- mobile + touch (Android/iOS) ---- */
 html{-webkit-text-size-adjust:100%}
 body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
@@ -175,6 +179,25 @@ body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
   .maya-btn,.maya-btn-ghost{min-height:42px}
   .maya-card .maya-btn-ghost.px-2,.table-maya .maya-btn-ghost{min-height:34px}
   main{padding-left:.8rem;padding-right:.8rem}
+}
+@media(max-width:1023px){
+  .maya-header .max-w-6xl{padding-left:.75rem;padding-right:.75rem}
+  .maya-header .max-w-6xl > .flex-1{min-width:0}
+  .maya-header .max-w-6xl > .flex-1 .text-xs{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mobile-menu-toggle{display:inline-flex}
+  .maya-header .topnav{display:none!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:.4rem;padding:.6rem .75rem .75rem!important;background:rgba(5,24,8,.48);border-top:1px solid rgba(255,255,255,.14)}
+  .maya-header .topnav.mobile-open{display:grid!important}
+  .maya-header .topnav a{display:flex;align-items:center;min-height:44px;padding:.65rem .7rem!important;border:1px solid rgba(255,255,255,.1);font-size:.83rem;line-height:1.1}
+  .topbar-cta{padding:.65rem .7rem!important;white-space:nowrap}
+}
+@media(max-width:390px){
+  .mobile-menu-label{display:none}
+  .maya-header .max-w-6xl{gap:.45rem}
+  .maya-header .max-w-6xl > .flex-1 .font-display{font-size:1.05rem}
+  .maya-header .max-w-6xl > .flex-1 .text-xs{font-size:.68rem}
+}
+@media(max-width:340px){
+  .maya-header .topnav.mobile-open{grid-template-columns:1fr}
 }
 /* ---- paleta de comando (Ctrl+K) ---- */
 .pal-box{position:fixed;z-index:75;left:50%;top:12vh;transform:translateX(-50%);width:min(560px,93vw);

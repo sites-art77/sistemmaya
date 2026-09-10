@@ -87,7 +87,7 @@ function dashProHTML(){
     <div class="font-black text-lg">Bem-vindo à MAYA Garden Pro!</div>
     <p class="text-sm mb-2" style="color:var(--muted)">Crie seu primeiro orçamento ou carregue dados de exemplo para explorar.</p>
     <div class="flex gap-2 flex-wrap"><a href="#/novo" class="maya-btn text-sm">+ Novo orçamento</a><button class="maya-btn-ghost text-sm" onclick="seedSample()">Carregar exemplo</button></div></div>`:''}
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+  <div class="dashboard-kpis grid grid-cols-2 md:grid-cols-4 gap-2">
     ${kpi('Faturado no mês','k-fat',fatM,1)}${kpi('Recebido no mês','k-rec',recMes,1)}
     ${kpi('A receber','k-arec',aReceber,1)}${kpi('MRR recorrente','k-mrr',mrr,1)}
     ${kpi('Ticket médio','k-tick',ticket,1)}${kpi('Conversão','k-conv',Math.round(conv)+'%',0)}

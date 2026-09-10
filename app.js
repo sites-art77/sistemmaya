@@ -120,6 +120,19 @@ const NAV_MAIN = [['#/','Início','⌂'],['#/orcamentos','Orçamentos','▤'],['
 const NAV_MGMT = [['#/recorrentes','Recorrentes','◔'],['#/os','Ordens de serviço','▣'],['#/clientes','Clientes','○'],['#/catalogo','Catálogo','≡'],['#/agenda','Agenda','▦'],['#/relatorios','Relatórios','◫']];
 const NAV_SYS = [['#/config','Configurações','◌']];
 function navActive(h){ const r=currentRoute(); return (h!=='#/'&&r.startsWith(h))||(h==='#/'&&r==='#/'); }
+window.toggleMobileNav = ()=>{
+  const nav=document.getElementById('main-nav');
+  const btn=document.getElementById('mobile-nav-toggle');
+  if(!nav) return;
+  const open=nav.classList.toggle('mobile-open');
+  if(btn){ btn.setAttribute('aria-expanded',String(open)); btn.setAttribute('aria-label',open?'Fechar menu':'Abrir menu'); }
+};
+window.closeMobileNav = ()=>{
+  const nav=document.getElementById('main-nav');
+  const btn=document.getElementById('mobile-nav-toggle');
+  if(nav) nav.classList.remove('mobile-open');
+  if(btn){ btn.setAttribute('aria-expanded','false'); btn.setAttribute('aria-label','Abrir menu'); }
+};
 function shell(active, html){
   const st = Store.settings;
   const logo = esc(st.logoPath);
@@ -143,13 +156,14 @@ function shell(active, html){
     <div class="max-w-6xl mx-auto px-4 py-4 flex items-center gap-3">
       <img src="${logo}" onerror="this.onerror=null;this.src='maya-garden-logo.jpg'" class="w-12 h-12 rounded-xl bg-white p-1 object-contain lg:hidden" alt="MAYA"/>
       <div class="flex-1">
-        <div class="font-black text-xl leading-none font-display">MAYA Garden</div>
-        <div class="text-xs opacity-90">Jardinagem • Orquídeas • Paisagismo — Petrópolis-RJ</div>
+       <div class="font-black text-xl leading-none font-display">MAYA Garden</div>
+       <div class="text-xs opacity-90">Jardinagem • Orquídeas • Paisagismo — Petrópolis-RJ</div>
       </div>
+      <button id="mobile-nav-toggle" class="mobile-menu-toggle" type="button" aria-expanded="false" aria-label="Abrir menu" onclick="toggleMobileNav()"><span aria-hidden="true">☰</span><span class="mobile-menu-label">Menu</span></button>
       <a href="#/novo" class="topbar-cta bg-white font-extrabold px-4 py-2 rounded-xl text-sm" style="color:#145214">+ Novo <span class="cta-sub">orçamento</span></a>
     </div>
-    <nav class="topnav max-w-6xl mx-auto px-4 pb-3 flex gap-1 flex-wrap text-sm">
-      ${[...NAV_MAIN,...NAV_MGMT,...sysNav].map(([h,l])=>`<a href="${h}" class="px-3 py-2 rounded-lg font-bold ${navActive(h)?'bg-white text-[#1A5D1A]':'text-white/90 hover:bg-white/15'}">${l}</a>`).join('')}
+    <nav id="main-nav" class="topnav max-w-6xl mx-auto px-4 pb-3 flex gap-1 flex-wrap text-sm" aria-label="Navegação principal">
+      ${[...NAV_MAIN,...NAV_MGMT,...sysNav].map(([h,l])=>`<a href="${h}" onclick="closeMobileNav()" class="px-3 py-2 rounded-lg font-bold ${navActive(h)?'bg-white text-[#1A5D1A]':'text-white/90 hover:bg-white/15'}">${l}</a>`).join('')}
     </nav>
   </div>
   <main class="max-w-6xl mx-auto px-4 py-6">${html}</main>
