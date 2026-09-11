@@ -49,7 +49,10 @@ body{font-family:'Inter','Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-se
 .budget-paper::before{content:"";position:absolute;inset:0;background-image:var(--wm-url);background-repeat:no-repeat;background-position:center;background-size:60%;opacity:var(--wm-opacity,.09);pointer-events:none}
 .budget-inner{position:relative;z-index:1;min-width:560px}
 /* drawer / modal */
-.drawer{position:fixed;top:0;right:0;height:100%;width:min(480px,94vw);background:#121B14;z-index:60;box-shadow:-20px 0 60px rgba(0,0,0,.6);border-top-left-radius:18px;border-bottom-left-radius:18px;border-left:1px solid var(--line);transform:translateX(105%)}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(480px,94vw);background:#121B14;color:var(--text,#fff);z-index:60;box-shadow:-20px 0 60px rgba(0,0,0,.6);border-top-left-radius:18px;border-bottom-left-radius:18px;border-left:1px solid var(--line);transform:none;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:16px;box-sizing:border-box}
+#drawer-root{position:fixed;inset:0;z-index:1000;isolation:isolate;pointer-events:none}
+#drawer-root:empty{display:none}
+#drawer-root .drawer,#drawer-root .modal-bg.show{pointer-events:auto}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:55;opacity:0;pointer-events:none;transition:opacity .25s}
 .modal-bg.show{opacity:1;pointer-events:auto}
 .price-tip{background:linear-gradient(135deg,#10270F,#16211A);border:2px dashed var(--maya-accent-2);border-radius:14px}

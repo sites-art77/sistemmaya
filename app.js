@@ -555,22 +555,15 @@ window.copyZap = ()=>{ collectSilent(); recalcDraft(); const t=zapFill(Draft); n
 
 /* ---------- drawer/modal ---------- */
 function openDrawer(html){
-  $('#drawer-root').innerHTML = `<div class="modal-bg show" onclick="closeDrawer()"></div><div class="drawer p-4 overflow-y-auto" id="drawer">${html}</div>`;
-  const d = document.querySelector('#drawer');
-  if(window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches){
-    // O drawer começa deslocado pelo CSS. Não limpar o transform no fim:
-    // isso faria o CSS original (translateX(105%)) esconder o painel novamente.
-    gsap.fromTo(d,{xPercent:105},{xPercent:0,duration:.38,ease:'power3.out'});
-    gsap.fromTo('#drawer > *',{x:24,opacity:0},{x:0,opacity:1,duration:.35,stagger:.05,delay:.1,ease:'power3.out',clearProps:'transform,opacity'});
-  }
-  else if(d){ d.style.transform='translateX(0)'; }
+  let root = document.getElementById('drawer-root');
+  if(!root){ root=document.createElement('div'); root.id='drawer-root'; }
+  // Keep fixed panels outside animated ancestors and visible without animation.
+  document.body.appendChild(root);
+  root.innerHTML = `<div class="modal-bg show" onclick="closeDrawer()"></div><div class="drawer p-4 overflow-y-auto" id="drawer" role="dialog" aria-modal="true" aria-label="Selecionar opções" tabindex="-1">${html}</div>`;
+  root.querySelector('#drawer').focus({preventScroll:true});
 }
 window.closeDrawer = ()=>{
-  const d = document.querySelector('#drawer');
-  if(window.gsap && d && !matchMedia('(prefers-reduced-motion: reduce)').matches){
-    gsap.to(d,{xPercent:105,duration:.28,ease:'power2.in',onComplete:()=>{ $('#drawer-root').innerHTML=''; }});
-    const bg = document.querySelector('#drawer-root .modal-bg'); if(bg) bg.classList.remove('show');
-  } else { $('#drawer-root').innerHTML=''; }
+  document.getElementById('drawer-root')?.remove();
 };
 
 /* ---------- ripple + brilho que segue o mouse ---------- */
