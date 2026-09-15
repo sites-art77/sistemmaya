@@ -404,7 +404,30 @@ function emptyState(t, s, btnLabel, btnGo){
 }
 window.emptyState = emptyState;
 window.openLight = src=>{ let o=document.getElementById('lightbox'); if(!o){ o=document.createElement('div'); o.id='lightbox'; document.body.appendChild(o); } o.innerHTML=`<div class="lightbox" onclick="document.getElementById('lightbox').innerHTML=''"><img src="${src}" alt="foto ampliada"></div>`; };
-window.installApp = async ()=>{ if(window._pwaPrompt){ window._pwaPrompt.prompt(); try{ await window._pwaPrompt.userChoice; }catch(e){} window._pwaPrompt=null; } else toast('No Chrome: menu ⋮ → "Instalar app" ou "Adicionar à tela inicial".'); };
+window.isStandalone = function(){
+  try{
+    return matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || window.navigator.standalone===true;
+  }catch(e){ return false; }
+};
+window.installApp = async ()=>{
+  if(window.isStandalone()){ toast('O app já está instalado.'); return; }
+  if(window._pwaPrompt){
+    window._pwaPrompt.prompt();
+    try{ await window._pwaPrompt.userChoice; }catch(e){}
+    window._pwaPrompt=null;
+    return;
+  }
+  const ua=navigator.userAgent||'';
+  if(/iPhone|iPad|iPod/i.test(ua)){
+    toast('No iPhone: toque em Compartilhar e depois em Adicionar à Tela de Início.');
+    return;
+  }
+  if(/Android/i.test(ua)){
+    toast('No Android: menu ⋮ do Chrome → Instalar app (ou Adicionar à tela inicial).');
+    return;
+  }
+  toast('No Chrome ou Edge: menu ⋮ → Instalar MAYA Garden.');
+};
 
 /* ---------- WHATSAPP DIRETO ---------- */
 function zapDigits(phone){ let d=String(phone||'').replace(/\D/g,''); if(d && d.length<=11 && !d.startsWith('55')) d='55'+d; return d; }

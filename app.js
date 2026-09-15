@@ -966,8 +966,10 @@ function viewConfig(){
   const st=Store.settings, p=Store.pricing, write=window.MayaAuth?.canWrite?.()!==false, disabled=write?'':'disabled';
   return `<h1 class="text-2xl font-black mb-3 anim-in">Configurações</h1>
   <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Sessão atual</b><div class="text-xs" style="color:var(--muted)">O sistema exige login e guarda os dados compartilhados na nuvem.</div></div></div><div class="mt-3">${window.CloudSync?.accountHtml?window.CloudSync.accountHtml():'Carregando sessão…'}</div>
-    <button type="button" class="maya-btn w-full mt-3" onclick="refreshSystem()">Atualizar sistema</button>
-    <p class="text-xs mt-2" style="color:var(--muted)">Se a tela parecer antiga, toque aqui. Limpa o cache do celular e recarrega a versão nova.</p>
+    <button type="button" class="maya-btn w-full mt-3" onclick="installApp()">Instalar no celular ou computador</button>
+    <p class="text-xs mt-2" style="color:var(--muted)">iPhone: Safari → Compartilhar → Adicionar à Tela de Início. Android e PC (Chrome/Edge): toque em Instalar.</p>
+    <button type="button" class="maya-btn-ghost w-full mt-2" onclick="refreshSystem()">Atualizar sistema</button>
+    <p class="text-xs mt-2" style="color:var(--muted)">Se a tela parecer antiga, toque aqui. Limpa o cache e recarrega a versão nova.</p>
   </div>
   <div class="maya-card p-4 mb-3 anim-in" style="opacity:1">
     <h2 class="font-extrabold mb-1">Preços por metro quadrado</h2>
