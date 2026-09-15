@@ -117,7 +117,7 @@ function finishProg(){
   if(window.gsap && !navReduced()){ gsap.killTweensOf(bar); gsap.to(bar,{width:'100%',duration:.22,ease:'power2.in',onComplete:()=>gsap.to(bar,{opacity:0,duration:.3})}); }
   else { bar.style.width='100%'; bar.style.opacity=0; }
 }
-const NAV_ORDER = ['#/','#/orcamentos','#/novo','#/os','#/clientes','#/catalogo','#/agenda','#/relatorios','#/config'];
+const NAV_ORDER = ['#/','#/orcamentos','#/novo','#/clientes','#/catalogo','#/agenda','#/relatorios','#/config'];
 function orderIdx(h){ const i=NAV_ORDER.indexOf(h); if(i>=0) return i; if(String(h).startsWith('#/editar/')) return 1.5; return 99; }
 function transitionTo(){
   if(window._navigating) return;
@@ -143,7 +143,7 @@ function transitionTo(){
 window.addEventListener('hashchange', transitionTo);
 
 const NAV_MAIN = [['#/','Início','⌂'],['#/orcamentos','Orçamentos','▤'],['#/novo','Novo orçamento','+']];
-const NAV_MGMT = [['#/os','Ordens de serviço','▣'],['#/clientes','Clientes','○'],['#/catalogo','Catálogo','≡'],['#/agenda','Agenda','▦'],['#/relatorios','Relatórios','◫']];
+const NAV_MGMT = [['#/clientes','Clientes','○'],['#/catalogo','Catálogo','≡'],['#/agenda','Agenda','▦'],['#/relatorios','Relatórios','◫']];
 const NAV_SYS = [['#/config','Configurações','◌']];
 function navActive(h){ const r=currentRoute(); return (h!=='#/'&&r.startsWith(h))||(h==='#/'&&r==='#/'); }
 window.toggleMobileNav = ()=>{
@@ -165,8 +165,7 @@ function shell(active, html){
   const t = todayISO(), mk = t.slice(0,7);
   const nPend = (Store.budgets||[]).filter(b=>effStatus(b)==='pendente').length;
   const nToday = (Store.visits||[]).filter(v=>v.date===t&&v.status!=='concluída'&&v.status!=='cancelada').length;
-  const nOS = (Store.os||[]).filter(o=>o.status==='aberta'||o.status==='em execução').length;
-  const badges = {'#/orcamentos':nPend,'#/agenda':nToday,'#/os':nOS};
+  const badges = {'#/orcamentos':nPend,'#/agenda':nToday};
   const sysNav = window.MayaAuth?.isAdmin?.() ? [...NAV_SYS,['#/admin','Administração','⚙']] : NAV_SYS;
   const sideGroup = (t,arr)=>`<div class="side-group">${t}</div>`+arr.map(([h,l,i])=>`<a href="${h}" class="side-link${navActive(h)?' active':''}"><span class="ico">${i}</span>${l}${badges[h]?`<span class="side-badge">${badges[h]}</span>`:''}</a>`).join('');
   return `
@@ -216,7 +215,7 @@ function render(){
   else if(r.startsWith('#/novo')){ if(!Draft){ Draft = normItems(blankBudget()); } window._dirty=false; html = viewEditor(false); }
   else if(r.startsWith('#/editar/')){ const id=r.split('/')[2]; const b=(Store.budgets||[]).find(x=>x.id===id); if(!b){ location.hash='#/orcamentos'; return; } Draft = normItems(structuredClone(b)); window._dirty=false; html = viewEditor(true); }
   else if(r.startsWith('#/orcamentos')) html = viewList();
-  else if(r.startsWith('#/os')) html = viewOS();
+  else if(r.startsWith('#/os')){ location.hash='#/'; return; }
   else if(r.startsWith('#/recorrentes')){ location.hash='#/'; return; }
   else if(r.startsWith('#/relatorios')) html = viewReports();
   else if(r.startsWith('#/admin')) html = viewAdmin();
@@ -422,7 +421,6 @@ function viewEditor(isEdit){
       <div class="flex gap-2 mt-2 flex-wrap no-print">
         <button class="maya-btn-ghost" onclick="copyZap()">Copiar msg</button>
         <button class="maya-btn-ghost" onclick="openZapDraft()">Abrir WhatsApp</button>
-        <button class="maya-btn-ghost" onclick="printOSDraft()">Ordem de serviço</button>
       </div>
     </div>
   </div>
@@ -883,10 +881,7 @@ window.renderList = ()=>{
       <a class="maya-btn-ghost px-2 py-1" href="#/editar/${b.id}">Editar</a>
       <button class="maya-btn-ghost px-2 py-1" onclick="dupBudget('${b.id}')">⧉ Duplicar</button>
       <button class="maya-btn-ghost px-2 py-1" onclick="pdfBudget('${b.id}')">⬇ Baixar PDF</button>
-      <button class="maya-btn-ghost px-2 py-1" onclick="printOS('${b.id}')">OS</button>
       <button class="maya-btn-ghost px-2 py-1" onclick="zapBudget('${b.id}')">Copiar</button>
-      <button class="maya-btn-ghost px-2 py-1" onclick="openZapBudget('${b.id}')">WhatsApp</button>
-      <button class="maya-btn-ghost px-2 py-1" onclick="billOS('${b.id}')">Gerar OS</button>
       <select class="maya-select !w-32 !py-1 text-xs" onchange="setStatus('${b.id}',this.value)">${['pendente','aprovado','recusado','expirado'].map(s=>`<option ${b.status===s?'selected':''}>${s}</option>`).join('')}</select>
       <button class="maya-btn-ghost px-2 py-1 !text-red-700 !border-red-300" onclick="delBudget('${b.id}')">Excluir</button>
     </div></div>`;}).join('') || emptyState('Nada por aqui','Nenhum orçamento com este filtro. Crie o primeiro em segundos.','Novo orçamento','#/novo');
