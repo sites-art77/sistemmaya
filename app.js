@@ -222,7 +222,7 @@ function render(){
   else if(r.startsWith('#/recorrentes')){ location.hash='#/'; return; }
   else if(r.startsWith('#/relatorios')) html = viewReports();
   else if(r.startsWith('#/admin')) html = viewAdmin();
-  else if(r.startsWith('#/clientes')) html = clientsProHTML('');
+  else if(r.startsWith('#/clientes')) html = clientsProHTML(window._cliQ||'');
   else if(r.startsWith('#/catalogo')) html = viewCatalog();
   else if(r.startsWith('#/agenda')) html = agendaProHTML();
   else if(r.startsWith('#/config')) html = viewConfig();
@@ -865,8 +865,8 @@ window.applyTip = v=>{
 function viewList(){
   return `<div class="flex gap-2 flex-wrap items-center mb-3 anim-in">
     <h1 class="text-2xl font-black">Orçamentos</h1><div class="flex-1"></div>
-    <input id="q" class="maya-input !w-56" placeholder="Buscar cliente/nº…" oninput="renderList()">
-    <select id="f" class="maya-select !w-40" onchange="renderList()"><option value="">todos status</option>${['pendente','aprovado','recusado','expirado'].map(s=>`<option>${s}</option>`).join('')}</select>
+    <input id="q" class="maya-input cat-search !w-full md:!w-56" placeholder="Buscar cliente ou número…" oninput="renderList()">
+    <select id="f" class="maya-select !w-full md:!w-40" onchange="renderList()"><option value="">todos</option>${['pendente','aprovado','recusado','expirado'].map(s=>`<option>${s}</option>`).join('')}</select>
     <a href="#/novo" class="maya-btn text-sm">+ Novo</a></div>
   <div id="list" class="grid md:grid-cols-2 gap-3"></div>`;
 }
@@ -874,21 +874,34 @@ window.renderList = ()=>{
   sweepExpired();
   const q = ($('#q')?.value||'').toLowerCase(), f = $('#f')?.value||'';
   let arr = [...(Store.budgets||[])].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
-  if(q) arr = arr.filter(b=>(b.client?.name+' '+b.number).toLowerCase().includes(q));
+  if(q) arr = arr.filter(b=>(b.client?.name+' '+b.number+' '+(b.client?.phone||'')).toLowerCase().includes(q));
   if(f) arr = arr.filter(b=>effStatus(b)===f);
-  $('#list').innerHTML = arr.map(b=>{const es=effStatus(b); return `<div class="maya-card p-4 anim-in" style="opacity:1">
-    <div class="flex items-center gap-2"><b>Nº ${esc(b.number)}</b><span class="maya-badge b-${es}">${es}</span>${b.contractId?'<span class="maya-badge b-aprovado">recorrente</span>':''}<div class="flex-1"></div><b class="text-[#1A5D1A]">${brl(b.total)}</b></div>
-    <div class="text-sm mt-1">${esc(b.client?.name)} • ${esc(b.client?.phone||'')} • ${fmtDate(b.date)} → ${fmtDate(b.validity)}</div>
-    ${b.status==='aprovado'?(()=>{const pt=paidTotal(b), tt=Number(b.total)||0, pc=tt>0?Math.min(100,100*pt/tt):0; return `<div class="flex items-center gap-2 mt-1 text-xs"><div class="p-track flex-1"><div class="p-bar" style="width:${pc.toFixed(0)}%"></div></div><b>${paidStatus(b)==='pago'?'pago':('recebido '+brl(pt)+' de '+brl(tt))}</b></div>`;})():''}
-    <div class="flex gap-1 mt-2 flex-wrap text-xs">
-      <a class="maya-btn-ghost px-2 py-1" href="#/editar/${b.id}">Editar</a>
-      <button class="maya-btn-ghost px-2 py-1" onclick="dupBudget('${b.id}')">⧉ Duplicar</button>
-      <button class="maya-btn-ghost px-2 py-1" onclick="pdfBudget('${b.id}')">⬇ Baixar PDF</button>
-      <button class="maya-btn-ghost px-2 py-1" onclick="zapBudget('${b.id}')">Copiar</button>
-      <select class="maya-select !w-32 !py-1 text-xs" onchange="setStatus('${b.id}',this.value)">${['pendente','aprovado','recusado','expirado'].map(s=>`<option ${b.status===s?'selected':''}>${s}</option>`).join('')}</select>
-      <button class="maya-btn-ghost px-2 py-1 !text-red-700 !border-red-300" onclick="delBudget('${b.id}')">Excluir</button>
-    </div></div>`;}).join('') || emptyState('Nada por aqui','Nenhum orçamento com este filtro. Crie o primeiro em segundos.','Novo orçamento','#/novo');
-  if(window.gsap) gsap.fromTo('#list > div',{y:12,opacity:0},{y:0,opacity:1,duration:.35,stagger:.04,clearProps:'transform'});
+  $('#list').innerHTML = arr.map(b=>{const es=effStatus(b); return `<div class="maya-card quote-card p-4 anim-in" style="opacity:1">
+    <a class="quote-main" href="#/editar/${b.id}">
+      <div class="flex items-center gap-2"><b>Nº ${esc(b.number)}</b><span class="maya-badge b-${es}">${es}</span><div class="flex-1"></div><b class="quote-total">${brl(b.total)}</b></div>
+      <div class="quote-who">${esc(b.client?.name||'Sem cliente')}</div>
+      <div class="quote-meta">${esc(b.client?.phone||'sem WhatsApp')} • ${fmtDate(b.date)}</div>
+      ${b.status==='aprovado'?(()=>{const pt=paidTotal(b), tt=Number(b.total)||0, pc=tt>0?Math.min(100,100*pt/tt):0; return `<div class="flex items-center gap-2 mt-1 text-xs"><div class="p-track flex-1"><div class="p-bar" style="width:${pc.toFixed(0)}%"></div></div><b>${paidStatus(b)==='pago'?'pago':('recebido '+brl(pt)+' de '+brl(tt))}</b></div>`;})():''}
+    </a>
+    <div class="quote-card-actions">
+      <button type="button" class="maya-btn" onclick="pdfBudget('${b.id}')">PDF</button>
+      <button type="button" class="maya-btn-ghost" onclick="openZapBudget('${b.id}')">WhatsApp</button>
+      <button type="button" class="maya-btn-ghost" onclick="quoteMore('${b.id}')">Mais</button>
+    </div>
+  </div>`;}).join('') || emptyState('Nada por aqui','Nenhum orçamento com este filtro. Crie o primeiro em segundos.','Novo orçamento','#/novo');
+};
+window.quoteMore=id=>{
+  const b=(Store.budgets||[]).find(x=>x.id===id); if(!b) return;
+  const es=effStatus(b);
+  openDrawer(`<h3 class="font-black text-lg">Orçamento Nº ${esc(b.number)}</h3>
+    <p class="text-sm mb-3" style="color:var(--muted)">${esc(b.client?.name||'')} • ${brl(b.total)}</p>
+    <label class="text-xs font-bold">Status<select class="maya-select mt-1" onchange="setStatus('${b.id}',this.value);closeDrawer()">${['pendente','aprovado','recusado','expirado'].map(s=>`<option ${b.status===s?'selected':''}>${s}</option>`).join('')}</select></label>
+    <div class="flex flex-col gap-2 mt-3">
+      <a class="maya-btn w-full text-center" href="#/editar/${b.id}" onclick="closeDrawer()">Abrir / editar</a>
+      <button class="maya-btn-ghost w-full" onclick="closeDrawer();dupBudget('${b.id}')">Duplicar</button>
+      <button class="maya-btn-ghost w-full visit-del" onclick="closeDrawer();delBudget('${b.id}')">Excluir</button>
+      <button class="maya-btn-ghost w-full" onclick="closeDrawer()">Fechar</button>
+    </div>`);
 };
 window.dupBudget = id=>{ const b=(Store.budgets||[]).find(x=>x.id===id); if(!b) return; const c=structuredClone(b); c.id=Store.uid(); c.number=Store.nextNumber(); c.status='pendente'; c.date=todayISO(); c.validity=addDays(todayISO(), Number(Store.settings.validityDays||15)); c.paid={entries:[]}; delete c.contractId; c.createdAt=new Date().toISOString(); const a=Store.budgets; a.push(c); Store.budgets=a; toast('Duplicado como '+c.number); renderList(); };
 window.delBudget = async id=>{ if(!await confirmModal('Excluir orçamento','Esta ação não pode ser desfeita. Deseja excluir este orçamento?')) return; Store.budgets=(Store.budgets||[]).filter(b=>b.id!==id); renderList(); toast('Orçamento excluído.'); };
@@ -1024,7 +1037,7 @@ function viewConfig(){
     <button type="button" class="maya-btn w-full mt-3" onclick="installApp()">Instalar no celular ou computador</button>
     <p class="text-xs mt-2" style="color:var(--muted)">iPhone: Safari → Compartilhar → Adicionar à Tela de Início. Android e PC (Chrome/Edge): toque em Instalar.</p>
     <button type="button" class="maya-btn-ghost w-full mt-2" onclick="remindersEnable()">Ativar aviso de visita</button>
-    <p class="text-xs mt-2" style="color:var(--muted)">3 dias antes da visita agendada o celular recebe uma notificação. No iPhone, o app precisa estar na tela inicial e as notificações permitidas.</p>
+    <p class="text-xs mt-2" style="color:var(--muted)">3 dias antes da visita o celular avisa. No iPhone o mais certo é <b>Agenda → Avisos no calendário</b>: o Calendário do iPhone notifica com o app fechado.</p>
   </div>
   <div class="maya-card p-4 mb-3 anim-in" style="opacity:1">
     <h2 class="font-extrabold mb-1">Preços por metro quadrado</h2>

@@ -428,3 +428,10 @@ body.maya-readonly main button[disabled]{opacity:.55;cursor:not-allowed}
 .cat-row .acts{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
 .cat-row .acts button{min-height:36px;padding:.3rem .65rem;font-size:.75rem;font-weight:800}
 .cat-item:active{opacity:.7}
+.quote-card{padding-bottom:12px}
+.quote-main{display:block;width:100%;text-align:left;background:transparent;border:0;color:inherit;padding:0;cursor:pointer;text-decoration:none}
+.quote-who{font-weight:800;margin-top:6px;font-size:1rem}
+.quote-meta{font-size:.78rem;color:var(--muted);margin-top:2px}
+.quote-total,.quote-card .price{color:var(--maya-accent);font-weight:900;white-space:nowrap}
+.quote-card-actions{display:flex;gap:8px;margin-top:10px}
+.quote-card-actions > *{flex:1;min-height:42px;text-decoration:none}

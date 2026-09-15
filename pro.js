@@ -149,38 +149,65 @@ function repAfter(){
 /* ---------- CLIENTES PRO ---------- */
 function clientsProHTML(q){
   const cs=Store.clients||[];
-  const f=(q||'').toLowerCase();
+  const f=String(q!=null?q:(window._cliQ||'')).toLowerCase();
+  window._cliQ=f;
   const arr=cs.filter(c=>!f||(c.name+' '+(c.phone||'')+' '+(c.address||'')).toLowerCase().includes(f))
-    .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
-  return `<div class="flex items-center gap-2 mb-3 anim-in flex-wrap"><h1 class="text-2xl font-black">Clientes (${cs.length})</h1><div class="flex-1"></div>
-    <input id="cq" class="maya-input !w-56" placeholder="Buscar…" value="${esc(q||'')}" oninput="renderClients(this.value)">
-    <button class="maya-btn text-sm" onclick="addClient()">+ Novo</button></div>
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name),'pt-BR'));
+  return `<div class="cat-head anim-in"><h1 class="text-2xl font-black">Clientes</h1>
+    <button class="maya-btn text-sm" onclick="addClient()">+ Cliente</button></div>
+  <input id="cq" class="maya-input cat-search" placeholder="Buscar nome, WhatsApp ou bairro…" value="${esc(window._cliQ||'')}" oninput="typeCliQ(this.value)">
   <div id="clist" class="grid md:grid-cols-2 gap-3">${arr.map(c=>{const bs=(Store.budgets||[]).filter(b=>b.client?.name===c.name);
     const ap=bs.filter(b=>b.status==='aprovado').reduce((s,b)=>s+Number(b.total||0),0);
-    return `<div class="maya-card p-4 anim-in" style="opacity:1"><div class="flex items-center gap-2"><b>${esc(c.name)}</b><div class="flex-1"></div><span class="text-xs font-bold" style="color:var(--maya-accent)">LTV ${brl(ap)}</span></div>
-    <div class="text-sm" style="color:var(--muted)">${esc(c.phone||'')} • ${esc(c.address||'')}</div>
-    <div class="text-xs mt-1">${pl(bs.length,'orçamento','orçamentos')} • ${pl(bs.filter(b=>effStatus(b)==='pendente').length,'ativo','ativos')}</div>
-    <div class="flex gap-1 mt-2 text-xs flex-wrap"><button class="maya-btn-ghost px-2 py-1" onclick="clientDetail('${c.id}')">Ver</button><button class="maya-btn-ghost px-2 py-1" onclick="newForClient('${c.id}')">+ Orçamento</button><button class="maya-btn-ghost px-2 py-1" onclick="editClient('${c.id}')">Editar</button></div></div>`;}).join('')||emptyState('Sem clientes','Cadastre para ver histórico e LTV de cada um.','Novo cliente',"addClient()")}</div>`;
+    const last=bs.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+    return `<div class="maya-card p-4 anim-in quote-card" style="opacity:1">
+      <button type="button" class="quote-main" onclick="clientDetail('${c.id}')">
+        <div class="flex items-center gap-2"><b>${esc(c.name)}</b><div class="flex-1"></div><span class="price">${brl(ap)}</span></div>
+        <div class="quote-who">${esc(c.phone||'sem WhatsApp')}</div>
+        <div class="quote-meta">${esc(c.address||'sem endereço')} • ${pl(bs.length,'orçamento','orçamentos')}</div>
+        ${last?`<div class="quote-meta">Último: Nº ${esc(last.number)} • ${fmtD(last.date)}</div>`:''}
+      </button>
+      <div class="quote-card-actions">
+        <button type="button" class="maya-btn" onclick="openZapText(${JSON.stringify(c.phone||'')}, ${JSON.stringify('Olá '+c.name+'! Aqui é MAYA Garden.')})">WhatsApp</button>
+        <button type="button" class="maya-btn-ghost" onclick="newForClient('${c.id}')">Orçamento</button>
+        <button type="button" class="maya-btn-ghost" onclick="editClient('${c.id}')">Editar</button>
+      </div>
+    </div>`;}).join('')||emptyState('Sem clientes','Cadastre para ver histórico e chamar no WhatsApp.','Novo cliente',"addClient()")}</div>`;
 }
-window.renderClients=q=>{ const w=document.getElementById('clist'); if(!w) return; const tmp=document.createElement('div'); tmp.innerHTML=clientsProHTML(q); const nl=tmp.querySelector('#clist'); if(nl) w.innerHTML=nl.innerHTML; const s=document.getElementById('cq'); };
+window.typeCliQ=v=>{
+  window._cliQ=v;
+  clearTimeout(window._cliQTimer);
+  window._cliQTimer=setTimeout(()=>{
+    const keep=document.getElementById('cq'); const pos=keep?keep.selectionStart:null;
+    render();
+    const el=document.getElementById('cq');
+    if(el){ el.focus(); try{ const n=pos==null?el.value.length:pos; el.setSelectionRange(n,n);}catch(e){} }
+  },180);
+};
+window.renderClients=q=>{ window._cliQ=q; render(); };
 window.clientDetail=id=>{
   const c=(Store.clients||[]).find(x=>x.id===id); if(!c) return;
   const bs=(Store.budgets||[]).filter(b=>b.client?.name===c.name).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
   const ap=bs.filter(b=>b.status==='aprovado').reduce((s,b)=>s+Number(b.total||0),0);
   const tot=bs.reduce((s,b)=>s+Number(b.total||0),0);
   const vs=(Store.visits||[]).filter(v=>v.client===c.name);
+  const hi=zapDigits(c.phone);
   openDrawer(`<h3 class="font-black text-lg">${esc(c.name)}</h3>
-  <div class="text-sm mb-2" style="color:var(--muted)">Tel: ${esc(c.phone||'-')} • End: ${esc(c.address||'-')}</div>
+  <div class="text-sm mb-2" style="color:var(--muted)">${esc(c.phone||'sem WhatsApp')}<br>${esc(c.address||'sem endereço')}</div>
+  <div class="quote-card-actions mb-3">
+    ${hi?`<button class="maya-btn" onclick="openZapText(${JSON.stringify(c.phone||'')}, ${JSON.stringify('Olá '+c.name+'! Aqui é MAYA Garden.')})">WhatsApp</button>`:''}
+    ${hi?`<a class="maya-btn-ghost" href="tel:+${hi}" style="text-align:center;display:flex;align-items:center;justify-content:center">Ligar</a>`:''}
+    <button class="maya-btn-ghost" onclick="closeDrawer();newForClient('${c.id}')">Orçamento</button>
+  </div>
   <div class="grid grid-cols-3 gap-2 text-center my-2">
     <div class="maya-card p-2"><div class="text-[11px]" style="color:var(--muted)">Orçamentos</div><div class="font-black">${bs.length}</div></div>
-    <div class="maya-card p-2"><div class="text-[11px]" style="color:var(--muted)">Total orçado</div><div class="font-black">${brl(tot)}</div></div>
-    <div class="maya-card p-2"><div class="text-[11px]" style="color:var(--muted)">LTV aprovado</div><div class="font-black" style="color:var(--maya-accent)">${brl(ap)}</div></div>
+    <div class="maya-card p-2"><div class="text-[11px]" style="color:var(--muted)">Total</div><div class="font-black">${brl(tot)}</div></div>
+    <div class="maya-card p-2"><div class="text-[11px]" style="color:var(--muted)">Aprovado</div><div class="font-black" style="color:var(--maya-accent)">${brl(ap)}</div></div>
   </div>
-  <div class="font-extrabold text-sm mb-1">Orçamentos</div>
-  ${bs.length?bs.map(b=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><b>${esc(b.number)}</b><span class="maya-badge b-${effStatus(b)}">${effStatus(b)}</span><div class="flex-1"></div><b>${brl(b.total)}</b><a class="font-bold" style="color:var(--maya-accent)" href="#/editar/${b.id}" onclick="closeDrawer()">abrir</a></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Sem orçamentos.</p>'}
-  <div class="font-extrabold text-sm mt-2 mb-1">Histórico (${pl(vs.length,'visita','visitas')})</div>
-  ${vs.length?vs.map(v=>`<div class="text-xs py-1">${fmtD(v.date)} — ${esc(v.service||'')} (${esc(v.status||'')})</div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Sem visitas.</p>'}
-  <div class="flex gap-2 mt-3 flex-wrap"><button class="maya-btn text-sm" onclick="closeDrawer();newForClient('${c.id}')">+ Orçamento</button><button class="maya-btn-ghost text-sm" onclick="closeDrawer()">Fechar</button></div>`);
+  <div class="font-extrabold text-sm mb-1">Histórico de orçamentos</div>
+  ${bs.length?bs.map(b=>`<a class="cat-row" href="#/editar/${b.id}" onclick="closeDrawer()"><div class="info"><b>Nº ${esc(b.number)}</b><div class="meta">${fmtD(b.date)} • ${effStatus(b)}</div></div><div class="price">${brl(b.total)}</div></a>`).join(''):'<p class="text-xs" style="color:var(--muted)">Sem orçamentos.</p>'}
+  <div class="font-extrabold text-sm mt-3 mb-1">Visitas</div>
+  ${vs.length?vs.map(v=>`<div class="text-sm py-1">${fmtD(v.date)} ${esc(v.time||'')} — ${esc(v.service||'')} <span style="color:var(--muted)">(${esc(v.status||'')})</span></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Sem visitas.</p>'}
+  <div class="flex gap-2 mt-3 flex-wrap"><button class="maya-btn-ghost text-sm" onclick="closeDrawer();editClient('${c.id}')">Editar</button><button class="maya-btn-ghost text-sm visit-del" onclick="closeDrawer();delClient('${c.id}')">Apagar</button><button class="maya-btn-ghost text-sm" onclick="closeDrawer()">Fechar</button></div>`);
 };
 
 /* ---------- RECORRENTES ---------- */
@@ -307,12 +334,13 @@ function agendaProHTML(){
   const visitBtns=v=>{
     const st=v.status||'agendada';
     const open=st!=='concluída'&&st!=='cancelada';
-    return `<div class="visit-actions">${open?`<button class="maya-btn-ghost" onclick="toggleVisit('${v.id}')">Concluir</button><button class="maya-btn-ghost" onclick="cancelVisit('${v.id}')">Cancelar</button>`:''}${st==='concluída'?`<button class="maya-btn-ghost" onclick="toggleVisit('${v.id}')">Reabrir</button>`:''}${st==='cancelada'?`<button class="maya-btn-ghost" onclick="reopenVisit('${v.id}')">Reativar</button>`:''}<button class="maya-btn-ghost visit-del" onclick="delVisit('${v.id}')">Apagar</button></div>`;
+    return `<div class="visit-actions">${open?`<button class="maya-btn-ghost" onclick="toggleVisit('${v.id}')">Concluir</button><button class="maya-btn-ghost" onclick="cancelVisit('${v.id}')">Cancelar</button><button class="maya-btn-ghost" onclick="addVisitToCalendar('${v.id}')">Calendário</button>`:''}${st==='concluída'?`<button class="maya-btn-ghost" onclick="toggleVisit('${v.id}')">Reabrir</button>`:''}${st==='cancelada'?`<button class="maya-btn-ghost" onclick="reopenVisit('${v.id}')">Reativar</button>`:''}<button class="maya-btn-ghost visit-del" onclick="delVisit('${v.id}')">Apagar</button></div>`;
   };
   return `<div class="flex items-center gap-2 mb-3 anim-in flex-wrap"><h1 class="text-2xl font-black">Agenda</h1><div class="flex-1"></div>
     <button class="maya-btn-ghost text-sm" onclick="calNav(-1)">←</button><b class="capitalize">${label}</b><button class="maya-btn-ghost text-sm" onclick="calNav(1)">→</button>
     <button class="maya-btn-ghost text-sm" onclick="openChecklist('')">Checklist</button>
     ${nCanc?`<button class="maya-btn-ghost text-sm visit-del" onclick="clearCancelledVisits()">Apagar ${nCanc} cancelada${nCanc>1?'s':''}</button>`:''}
+    <button class="maya-btn-ghost text-sm" onclick="syncVisitCalendar()">Avisos no calendário</button>
     <button class="maya-btn text-sm" onclick="addVisitOn(window.CalDay)">+ Agendar dia ${fmtD(window.CalDay)}</button></div>
   ${remindBox}
   <div class="grid lg:grid-cols-5 gap-3">
@@ -325,10 +353,17 @@ function agendaProHTML(){
 }
 window.calNav=d=>{ window.CalYM=addMonths(window.CalYM+'-01',d).slice(0,7); render(); };
 window.calPick=iso=>{ window.CalDay=iso; render(); };
-window.addVisitOn=date=>{ openModal('Agendar visita — '+fmtD(date), MF.text('av-client','Cliente *','')+`<div class="f-row2">`+MF.time('av-time','Hora','09:00')+MF.num('av-price','Valor previsto R$',0)+`</div>`+MF.text('av-service','Serviço','Visita avaliação'), ()=>{
+window.addVisitOn=date=>{
+  const clients=Store.clients||[];
+  const pick=clients.length?`<label class="font-bold text-sm">Cliente salvo<select id="av-pick" class="maya-select mt-1" onchange="const c=(Store.clients||[]).find(x=>x.id===this.value); if(c){ const n=document.getElementById('av-client'); if(n) n.value=c.name; }"><option value="">digitar abaixo…</option>${clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>`:'';
+  openModal('Agendar visita — '+fmtD(date), pick+MF.text('av-client','Cliente *','')+`<div class="f-row2">`+MF.time('av-time','Hora','09:00')+MF.num('av-price','Valor previsto R$',0)+`</div>`+MF.text('av-service','Serviço','Visita avaliação'), ()=>{
     const client=mv('av-client'); if(!client) return 'Informe o cliente.';
-    const a=Store.visits; a.push({id:Store.uid(),client,date,time:mv('av-time'),service:mv('av-service'),price:numBR(mv('av-price'))||0,status:'agendada'}); Store.visits=a; render(); toast('Agendado!'); if(window.MayaReminders) window.MayaReminders.afterVisitSaved(); return true;
-  }); };
+    const visit={id:Store.uid(),client,date,time:mv('av-time'),service:mv('av-service'),price:numBR(mv('av-price'))||0,status:'agendada'};
+    const a=Store.visits; a.push(visit); Store.visits=a; render(); toast('Agendado!');
+    if(window.MayaReminders) window.MayaReminders.afterVisitSaved(visit);
+    return true;
+  });
+};
 
 /* ---------- limpa dados de demonstração ---------- */
 window.stripMayaDemo=()=>{
