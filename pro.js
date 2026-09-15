@@ -215,14 +215,14 @@ function viewContracts(){
 }
 window.addContract=()=>{ openModal('Novo contrato recorrente', MF.text('co-client','Cliente *','','Nome do cliente')+MF.text('co-title','Serviço recorrente','Manutenção mensal do jardim')+`<div class="f-row2">`+MF.num('co-value','Valor mensal R$ *',350)+MF.date('co-start','Início',todayISO())+`</div>`+`<div class="f-row2">`+MF.text('co-phone','WhatsApp','')+MF.text('co-addr','Endereço','')+`</div>`+MF.area('co-notes','Observações (ex: todo dia 5)','',2), ()=>{
     const name=mv('co-client'); if(!name) return 'Informe o cliente.';
-    const value=Number(mv('co-value'))||0; if(value<=0) return 'Informe o valor mensal.';
+    const value=numBR(mv('co-value'))||0; if(value<=0) return 'Informe o valor mensal.';
     const a=Store.contracts; a.push({id:Store.uid(), client:{name,phone:mv('co-phone'),address:mv('co-addr')}, title:mv('co-title')||'Manutenção mensal', value, freq:'mensal', startDate:mv('co-start')||todayISO(), lastBilled:'', active:true, notes:mv('co-notes')});
     Store.contracts=a; const cs=Store.clients; if(!cs.some(c=>c.name.toLowerCase()===name.toLowerCase())){ cs.push({id:Store.uid(),name,phone:mv('co-phone'),address:mv('co-addr')}); Store.clients=cs; }
     render(); toast('Contrato criado!'); return true;
   }); };
 window.editContract=id=>{ const a=Store.contracts, c=a.find(x=>x.id===id); if(!c) return;
   openModal('Editar contrato', MF.text('co-title','Serviço',c.title)+`<div class="f-row2">`+MF.num('co-value','Valor mensal R$',c.value)+MF.date('co-start','Início',c.startDate)+`</div>`+MF.area('co-notes','Observações',c.notes||'',2), ()=>{
-    c.title=mv('co-title')||c.title; c.value=Number(mv('co-value'))||c.value; c.startDate=mv('co-start')||c.startDate; c.notes=mv('co-notes'); Store.contracts=a; render(); toast('Contrato atualizado!'); return true;
+    c.title=mv('co-title')||c.title; c.value=numBR(mv('co-value'))||c.value; c.startDate=mv('co-start')||c.startDate; c.notes=mv('co-notes'); Store.contracts=a; render(); toast('Contrato atualizado!'); return true;
   }); };
 window.toggleContract=id=>{ const a=Store.contracts, c=a.find(x=>x.id===id); c.active=c.active===false?true:false; Store.contracts=a; render(); };
 window.delContract=async id=>{ if(!await confirmModal('Excluir contrato','O contrato será encerrado. Orçamentos já gerados serão mantidos.')) return; Store.contracts=Store.contracts.filter(c=>c.id!==id); render(); };
@@ -324,7 +324,7 @@ window.calNav=d=>{ window.CalYM=addMonths(window.CalYM+'-01',d).slice(0,7); rend
 window.calPick=iso=>{ window.CalDay=iso; render(); };
 window.addVisitOn=date=>{ openModal('Agendar visita — '+fmtD(date), MF.text('av-client','Cliente *','')+`<div class="f-row2">`+MF.time('av-time','Hora','09:00')+MF.num('av-price','Valor previsto R$',0)+`</div>`+MF.text('av-service','Serviço','Visita avaliação'), ()=>{
     const client=mv('av-client'); if(!client) return 'Informe o cliente.';
-    const a=Store.visits; a.push({id:Store.uid(),client,date,time:mv('av-time'),service:mv('av-service'),price:Number(mv('av-price'))||0,status:'agendada'}); Store.visits=a; render(); toast('Agendado!'); return true;
+    const a=Store.visits; a.push({id:Store.uid(),client,date,time:mv('av-time'),service:mv('av-service'),price:numBR(mv('av-price'))||0,status:'agendada'}); Store.visits=a; render(); toast('Agendado!'); return true;
   }); };
 
 /* ---------- DADOS DE EXEMPLO ---------- */

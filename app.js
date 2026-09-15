@@ -3,6 +3,22 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const brl = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+function numBR(v){
+  if(typeof v==='number') return Number.isFinite(v)?v:0;
+  let s=String(v??'').trim().replace(/[R$\s]/g,'');
+  if(!s) return 0;
+  const hasC=s.includes(','), hasD=s.includes('.');
+  if(hasC && hasD) s=s.replace(/\./g,'').replace(',','.');
+  else if(hasC) s=s.replace(',','.');
+  else if(hasD){
+    const parts=s.split('.');
+    if(parts.length>2) s=parts.join('');
+    else if(parts[1] && parts[1].length===3) s=parts.join('');
+  }
+  const n=Number(s);
+  return Number.isFinite(n)?n:0;
+}
+window.numBR = numBR;
 const todayISO = () => new Date().toISOString().slice(0,10);
 const addDays = (iso,d) => { const t=new Date(iso||todayISO()); t.setDate(t.getDate()+Number(d||0)); return t.toISOString().slice(0,10); };
 const fmtDate = iso => { try{ return new Date(iso+'T12:00:00').toLocaleDateString('pt-BR'); }catch{ return iso||''; } };
@@ -275,7 +291,7 @@ function m2Services(){
 window.applyM2 = function(){
   if(!Draft) return;
   const tipo = ($('#f-m2tipo')||{}).value;
-  const area = Number(($('#f-m2area')||{}).value||0);
+  const area = numBR(($('#f-m2area')||{}).value);
   const svc = m2Services().find(x=>x.k===tipo) || m2Services()[0];
   if(!(area>0)){ toast('Informe a área em m²'); $('#f-m2area')?.focus(); return; }
   const val = Math.round(area * Number(svc.rate) * 100)/100;
@@ -340,12 +356,12 @@ function viewEditor(isEdit){
         <h2 class="font-extrabold mb-1 mt-3">2. Descreva o serviço</h2>
         <p class="text-xs mb-2" style="color:var(--muted)">Escreva tudo do orçamento aqui. Sem catálogo, sem pacote. Esse texto sai no PDF.</p>
         <textarea id="f-servicetext" class="maya-textarea free-scope" rows="10" placeholder="Ex: Limpeza completa do jardim, poda das cercas-vivas, capina dos canteiros, adubação e varrição. Material incluso. Execução em 1 dia.">${esc(d.serviceText||'')}</textarea>
-        <label class="text-xs font-bold block mt-2">Valor do serviço R$<input type="number" step="any" id="f-servicevalue" class="maya-input" value="${esc(d.serviceValue||0)}" placeholder="0"></label>
+        <label class="text-xs font-bold block mt-2">Valor do serviço R$<input type="text" inputmode="decimal" enterkeyhint="done" id="f-servicevalue" class="maya-input" value="${esc(d.serviceValue||0)}" placeholder="0"></label>
         <div class="m2-box mt-3">
           <div class="text-xs font-extrabold mb-1">Calcular por m²</div>
           <select id="f-m2tipo" class="maya-select mb-2" onchange="hintM2()">${m2Services().map(s=>`<option value="${s.k}">${esc(s.t)} — ${brl(s.rate)}/m²</option>`).join('')}</select>
           <div class="grid grid-cols-2 gap-2">
-            <input type="number" step="any" min="0" id="f-m2area" class="maya-input" placeholder="Área em m²">
+            <input type="text" inputmode="decimal" enterkeyhint="done" id="f-m2area" class="maya-input" placeholder="Área em m²">
             <button type="button" class="maya-btn" onclick="applyM2()">Aplicar</button>
           </div>
           <div class="text-xs mt-1" id="m2-hint" style="color:var(--muted)">${esc(m2Services()[0].t)}: ${brl(m2Services()[0].rate)} por m²</div>
@@ -386,11 +402,11 @@ function viewEditor(isEdit){
         </div>
         <div class="text-xs mt-1 font-bold" id="t-parcinfo" style="color:var(--maya-accent)"></div>
         <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
-          <label class="font-bold">Sinal %<input type="number" id="f-signal" class="maya-input" value="${esc(d.signalPct||0)}" placeholder="0"></label>
-          <label class="font-bold">Deslocamento R$<input type="number" id="f-desloc" class="maya-input" value="${esc(d.displacement||0)}" placeholder="0"></label>
+          <label class="font-bold">Sinal %<input type="text" inputmode="decimal" enterkeyhint="done" id="f-signal" class="maya-input" value="${esc(d.signalPct||0)}" placeholder="0"></label>
+          <label class="font-bold">Deslocamento R$<input type="text" inputmode="decimal" enterkeyhint="done" id="f-desloc" class="maya-input" value="${esc(d.displacement||0)}" placeholder="0"></label>
         </div>
         <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
-          <label class="font-bold">Desconto<input type="number" id="f-desc" class="maya-input" value="${esc(d.discount)}"></label>
+          <label class="font-bold">Desconto<input type="text" inputmode="decimal" enterkeyhint="done" id="f-desc" class="maya-input" value="${esc(d.discount)}"></label>
           <label class="font-bold">Tipo<select id="f-desct" class="maya-select"><option value="pct" ${d.discountType==='pct'?'selected':''}>% porc.</option><option value="vlr" ${d.discountType==='vlr'?'selected':''}>R$ valor</option></select></label>
         </div>
         <label class="text-xs font-bold block mt-2">Observações internas<textarea id="f-notes" class="maya-textarea" rows="2" placeholder="Só para vocês. Não sai no PDF.">${esc(d.notes)}</textarea></label>
@@ -426,9 +442,9 @@ function itemRow(it, i){
   return `<div class="border rounded-xl p-2 mb-2 bg-[#fbfdf6]" data-row="${i}">
     <input class="maya-input mb-1" placeholder="Descrição do serviço *" value="${esc(it.desc)}" oninput="editItem(${i},'desc',this.value)">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-1">
-      <label class="text-[11px] font-bold">Qtd<input type="number" step="any" class="maya-input" value="${esc(it.qty)}" oninput="editItem(${i},'qty',this.value)"></label>
+      <label class="text-[11px] font-bold">Qtd<input type="text" inputmode="decimal" enterkeyhint="done" class="maya-input" value="${esc(it.qty)}" oninput="editItem(${i},'qty',this.value)"></label>
       <label class="text-[11px] font-bold">Und<input class="maya-input" value="${esc(it.unitLabel||it.unit||'un')}" oninput="editItem(${i},'unitLabel',this.value)" placeholder="m²/hora/un"></label>
-      <label class="text-[11px] font-bold">Valor unit R$<input type="number" step="any" class="maya-input" value="${esc(it.unit)}" oninput="editItem(${i},'unit',this.value)"></label>
+      <label class="text-[11px] font-bold">Valor unit R$<input type="text" inputmode="decimal" enterkeyhint="done" class="maya-input" value="${esc(it.unit)}" oninput="editItem(${i},'unit',this.value)"></label>
       <div class="flex items-end gap-1">
         <button class="maya-btn-ghost text-xs px-2 py-2" title="Dica de preço p/ este item" aria-label="Dica de preço para este item" onclick="openCalc(${i})">Dica</button>
         <button class="maya-btn-ghost text-xs px-2 py-2" title="Remover" aria-label="Remover item" onclick="delItem(${i})">Excluir</button>
@@ -467,6 +483,7 @@ window.setQuoteMode = function(m){
 };
 window.editItem = (i,f,v)=>{
   if(!Draft?.items[i]) return;
+  if(f==='qty'||f==='unit') v=numBR(v);
   Draft.items[i][f]=v; window._dirty=true;
   recalcDraft(); paintEditorTotalsOnly(); paintPreviewOnly();
   // atualiza subtotal da linha sem re-renderizar (não perde foco)
@@ -497,7 +514,7 @@ function paintPaid(){ const box=document.querySelector('#paidbox'); if(!box||!Dr
   ${p.rem>0.009&&p.tot>0?`<button class="maya-btn-ghost text-xs mt-1" onclick="payFull()">Quitar ${brl(p.rem)}</button>`:''}`; }
 window.addPayment=()=>{ recalcDraft();
   openModal('Registrar recebimento', MF.num('pm-value','Valor R$ *',paidRemaining(Draft).toFixed(2))+`<div class="f-row2">`+MF.date('pm-date','Data',todayISO())+MF.sel('pm-method','Forma',[['Pix','Pix'],['Dinheiro','Dinheiro'],['Cartão','Cartão'],['Transferência','Transferência'],['Boleto','Boleto']],'Pix')+`</div>`, ()=>{
-    const v=Number(mv('pm-value'))||0; if(v<=0) return 'Informe um valor maior que zero.';
+    const v=numBR(mv('pm-value')); if(v<=0) return 'Informe um valor maior que zero.';
     Draft.paid.entries.push({id:Store.uid(),date:mv('pm-date')||todayISO(),value:v,method:mv('pm-method')}); window._dirty=true; paintPaid(); toast('Recebimento registrado!'); return true; }); };
 window.payFull=()=>{ const r=paidRemaining(Draft); if(r<=0) return; Draft.paid.entries.push({id:Store.uid(),date:todayISO(),value:Math.round(r*100)/100,method:Draft.payMethod||Draft.payment||'Pix'}); window._dirty=true; paintPaid(); };
 window.delPayment=i=>{ Draft.paid.entries.splice(i,1); window._dirty=true; paintPaid(); };
@@ -512,15 +529,15 @@ function collectEditor(){
   Draft.validity = $('#f-valid').value || addDays(Draft.date, Store.settings.validityDays);
   Draft.status = $('#f-status').value;
   Draft.payMethod = $('#f-paymethod').value;
-  Draft.payParcels = Math.min(21, Math.max(1, Number($('#f-parcels').value||1)));
+  Draft.payParcels = Math.min(21, Math.max(1, numBR($('#f-parcels').value)||1));
   Draft.payment = Draft.payMethod;
-  Draft.signalPct = Number($('#f-signal').value||0);
+  Draft.signalPct = numBR($('#f-signal').value);
   Draft.notes = $('#f-notes').value;
   Draft.serviceText = ($('#f-servicetext')||{}).value || '';
-  Draft.serviceValue = Number(($('#f-servicevalue')||{}).value||0);
-  Draft.discount = Number($('#f-desc').value||0);
+  Draft.serviceValue = numBR(($('#f-servicevalue')||{}).value);
+  Draft.discount = numBR($('#f-desc').value);
   Draft.discountType = $('#f-desct').value;
-  Draft.displacement = Number($('#f-desloc').value||0);
+  Draft.displacement = numBR($('#f-desloc').value);
   recalcDraft();
 }
 function paintEditorTotalsOnly(){
@@ -549,11 +566,11 @@ function collectSilent(){
   try{
     Draft.client.name=$('#f-name').value; Draft.client.phone=$('#f-phone').value; Draft.client.address=$('#f-addr').value;
     Draft.date=$('#f-date').value; Draft.validity=$('#f-valid').value; Draft.status=$('#f-status').value;
-    Draft.payMethod=$('#f-paymethod').value; Draft.payParcels=Math.min(21,Math.max(1,Number($('#f-parcels').value||1))); Draft.payment=Draft.payMethod;
-    Draft.signalPct=Number($('#f-signal').value||0); Draft.notes=$('#f-notes').value;
+    Draft.payMethod=$('#f-paymethod').value; Draft.payParcels=Math.min(21,Math.max(1,numBR($('#f-parcels').value)||1)); Draft.payment=Draft.payMethod;
+    Draft.signalPct=numBR($('#f-signal').value); Draft.notes=$('#f-notes').value;
     if($('#f-servicetext')) Draft.serviceText=$('#f-servicetext').value;
-    if($('#f-servicevalue')) Draft.serviceValue=Number($('#f-servicevalue').value||0);
-    Draft.discount=Number($('#f-desc').value||0); Draft.discountType=$('#f-desct').value; Draft.displacement=Number($('#f-desloc').value||0);
+    if($('#f-servicevalue')) Draft.serviceValue=numBR($('#f-servicevalue').value);
+    Draft.discount=numBR($('#f-desc').value); Draft.discountType=$('#f-desct').value; Draft.displacement=numBR($('#f-desloc').value);
   }catch{}
 }
 ['f-name','f-phone','f-addr','f-date','f-valid','f-status','f-paymethod','f-parcels','f-signal','f-notes','f-desc','f-desct','f-desloc'].forEach(()=>{});
@@ -700,7 +717,7 @@ function confirmModal(title, msg, okLabel){
 /* atalhos de campo p/ modais */
 const MF = {
   text:(id,l,v,ph)=>`<label>${l}<input class="maya-input" id="${id}" value="${esc(v||'')}" placeholder="${esc(ph||'')}"></label>`,
-  num:(id,l,v,step)=>`<label>${l}<input type="number" step="${step||'any'}" class="maya-input" id="${id}" value="${esc(v??'')}"></label>`,
+  num:(id,l,v,step)=>`<label>${l}<input type="text" inputmode="decimal" enterkeyhint="done" class="maya-input" id="${id}" value="${esc(v??'')}"></label>`,
   date:(id,l,v)=>`<label>${l}<input type="date" class="maya-input" id="${id}" value="${esc(v||'')}"></label>`,
   time:(id,l,v)=>`<label>${l}<input type="time" class="maya-input" id="${id}" value="${esc(v||'')}"></label>`,
   area:(id,l,v,rows)=>`<label>${l}<textarea class="maya-textarea" rows="${rows||2}" id="${id}">${esc(v||'')}</textarea></label>`,
@@ -747,7 +764,7 @@ window.openCalc = (itemIndex)=>{
     <div class="text-xs font-extrabold mb-1" style="color:var(--muted)">2 • TAMANHO <span id="c-unit" class="font-normal"></span></div>
     <div class="calc-size-wrap">
       <button class="stepper" onclick="calcSize(-1)">−</button>
-      <input type="number" id="c-size" class="calc-size" value="50" min="0">
+      <input type="text" inputmode="decimal" enterkeyhint="done" id="c-size" class="calc-size" value="50">
       <button class="stepper" onclick="calcSize(1)">+</button>
     </div>
     <div class="flex gap-1 mt-1">${[10,30,50,100,200].map(v=>`<button class="maya-btn-ghost text-xs px-2 py-1" onclick="document.getElementById('c-size').value=${v}">${v}</button>`).join('')}</div>
@@ -764,8 +781,8 @@ window.openCalc = (itemIndex)=>{
     <summary>Extras (frequência, insumos, deslocamento)</summary>
     <div class="calc-details-body grid grid-cols-2 gap-2 text-sm">
       <label id="c-freqbox" class="font-bold col-span-2">Frequência<select id="c-freq" class="maya-select"><option value="mensal">mensal</option><option value="quinzenal">quinzenal</option><option value="semanal">semanal</option><option value="unica">única</option></select></label>
-      <label class="font-bold">Insumos R$<input type="number" id="c-ins" class="maya-input" value="80"></label>
-      <label class="font-bold">Desloc. R$<input type="number" id="c-des" class="maya-input" value="${esc(st.displacementDefault)}"></label>
+      <label class="font-bold">Insumos R$<input type="text" inputmode="decimal" enterkeyhint="done" id="c-ins" class="maya-input" value="80"></label>
+      <label class="font-bold">Desloc. R$<input type="text" inputmode="decimal" enterkeyhint="done" id="c-des" class="maya-input" value="${esc(st.displacementDefault)}"></label>
     </div>
   </details>
   <button class="maya-btn w-full mt-3" style="font-size:1.05rem" onclick="calcNow()">Ver sugestão →</button>
@@ -785,13 +802,13 @@ function syncCalcUI(){
 }
 window.pickCalcTipo = v=>{ window.CalcTipo=v; syncCalcUI(); const o=$('#c-out'); if(o) o.innerHTML=''; };
 window.pickCalcNivel = v=>{ window.CalcNivel=v; syncCalcUI(); const o=$('#c-out'); if(o) o.innerHTML=''; };
-window.calcSize = d=>{ const i=$('#c-size'); if(!i) return; const o=calcOpt(); const step = o.unit==='horas'?1:5; i.value = Math.max(0, (Number(i.value)||0) + d*step); };
+window.calcSize = d=>{ const i=$('#c-size'); if(!i) return; const o=calcOpt(); const step = o.unit==='horas'?1:5; i.value = Math.max(0, numBR(i.value) + d*step); };
 window.calcNow = ()=>{
   const o = calcOpt();
   const nivelMap = {essencial:'simples', padrao:'medio', premium:'premium'};
-  const size = Number(($('#c-size')||{}).value||0);
+  const size = numBR(($('#c-size')||{}).value);
   const inp = {tipo:o.tipo, freq:($('#c-freq')||{}).value||'mensal', complexidade:nivelMap[window.CalcNivel]||'simples',
-    insumos:Number(($('#c-ins')||{}).value||0), desloc:Number(($('#c-des')||{}).value||0)};
+    insumos:numBR(($('#c-ins')||{}).value), desloc:numBR(($('#c-des')||{}).value)};
   if(o.tipo==='hora') inp.horas=size; else if(o.tipo==='vaso') inp.qtd=size; else inp.area=size;
   const s = sugerirPreco(inp);
   const cur = (CalcSel!==null && Draft?.items[CalcSel]) ? Number(Draft.items[CalcSel].unit)*Number(Draft.items[CalcSel].qty||1) : Number(Draft?.total||0);
@@ -912,16 +929,16 @@ function viewCatalog(){
     <input class="maya-input md:col-span-2" value="${esc(c.name)}" onchange="updCat('${c.id}','name',this.value)">
     <input class="maya-input md:col-span-2" value="${esc(c.desc||'')}" onchange="updCat('${c.id}','desc',this.value)">
     <input class="maya-input" value="${esc(c.unit)}" onchange="updCat('${c.id}','unit',this.value)">
-    <input type="number" class="maya-input" value="${esc(c.price)}" onchange="updCat('${c.id}','price',this.value)">
+    <input type="text" inputmode="decimal" enterkeyhint="done" class="maya-input" value="${esc(c.price)}" onchange="updCat('${c.id}','price',this.value)">
     <button class="maya-btn-ghost text-xs" onclick="delCat('${c.id}')">Excluir</button></div>`).join('')}</div>`).join('')}`;
 }
-window.updCat=(id,f,v)=>{ const a=Store.catalog; const c=a.find(x=>x.id===id); c[f]=(f==='price'?Number(v)||0:v); Store.catalog=a; toast('Catálogo atualizado'); };
+window.updCat=(id,f,v)=>{ const a=Store.catalog; const c=a.find(x=>x.id===id); c[f]=(f==='price'?numBR(v):v); Store.catalog=a; toast('Catálogo atualizado'); };
 window.delCat=async id=>{ if(!await confirmModal('Excluir item','Remover este item do catálogo?'))return; Store.catalog=Store.catalog.filter(c=>c.id!==id); render(); };
 window.addCat=()=>{ const cats=[...new Set(Store.catalog.map(c=>c.cat))];
   openModal('Novo item do catálogo', MF.sel('ct-cat','Categoria',[...cats,'+ Nova categoria…'],cats[0])+MF.text('ct-catnew','Nova categoria (se escolheu + Nova)','','Ex: Irrigação')+MF.text('ct-name','Serviço *','','Ex: Poda de cerca-viva')+MF.area('ct-desc','Descrição','',2)+`<div class="f-row2">`+MF.text('ct-unit','Unidade','un')+MF.num('ct-price','Preço R$ *',100)+`</div>`, ()=>{
     let cat=mv('ct-cat'); if(cat==='+ Nova categoria…') cat=mv('ct-catnew'); if(!cat) return 'Informe a categoria.';
     const name=mv('ct-name'); if(!name) return 'Informe o nome do serviço.';
-    const price=Number(mv('ct-price'))||0; if(price<=0) return 'Informe um preço maior que zero.';
+    const price=numBR(mv('ct-price')); if(price<=0) return 'Informe um preço maior que zero.';
     const a=Store.catalog; a.push({id:Store.uid(),cat,name,desc:mv('ct-desc'),unit:mv('ct-unit')||'un',price}); Store.catalog=a; render(); toast('Item adicionado!'); return true;
   }); };
 window.resetCat=async ()=>{ if(!await confirmModal('Restaurar catálogo','Voltar à tabela padrão 2026? Suas alterações serão perdidas.','Restaurar'))return; localStorage.removeItem('maya_catalog_v1'); render(); };
@@ -935,7 +952,7 @@ function viewAgendaLegacy(){
 }
 window.addVisit=()=>{ openModal('Agendar visita', MF.text('av-client','Cliente *','','Nome do cliente')+`<div class="f-row2">`+MF.date('av-date','Data',todayISO())+MF.time('av-time','Hora','09:00')+`</div>`+MF.text('av-service','Serviço','Visita avaliação')+MF.num('av-price','Valor previsto R$',0), ()=>{
     const client=mv('av-client'); if(!client) return 'Informe o cliente.';
-    const a=Store.visits; a.push({id:Store.uid(),client,date:mv('av-date')||todayISO(),time:mv('av-time'),service:mv('av-service'),price:Number(mv('av-price'))||0,status:'agendada'}); Store.visits=a; render(); toast('Visita agendada!'); return true;
+    const a=Store.visits; a.push({id:Store.uid(),client,date:mv('av-date')||todayISO(),time:mv('av-time'),service:mv('av-service'),price:numBR(mv('av-price')),status:'agendada'}); Store.visits=a; render(); toast('Visita agendada!'); return true;
   }); };
 window.toggleVisit=id=>{ const a=Store.visits; const v=a.find(x=>x.id===id); v.status=v.status==='concluída'?'agendada':'concluída'; Store.visits=a; render(); };
 window.delVisit=async id=>{ if(!await confirmModal('Excluir visita','Remover esta visita da agenda?'))return; Store.visits=Store.visits.filter(v=>v.id!==id); render(); };
@@ -948,7 +965,10 @@ function viewAdmin(){
 function viewConfig(){
   const st=Store.settings, p=Store.pricing, write=window.MayaAuth?.canWrite?.()!==false, disabled=write?'':'disabled';
   return `<h1 class="text-2xl font-black mb-3 anim-in">Configurações</h1>
-  <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Sessão atual</b><div class="text-xs" style="color:var(--muted)">O sistema exige login e guarda os dados compartilhados na nuvem.</div></div></div><div class="mt-3">${window.CloudSync?.accountHtml?window.CloudSync.accountHtml():'Carregando sessão…'}</div></div>
+  <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Sessão atual</b><div class="text-xs" style="color:var(--muted)">O sistema exige login e guarda os dados compartilhados na nuvem.</div></div></div><div class="mt-3">${window.CloudSync?.accountHtml?window.CloudSync.accountHtml():'Carregando sessão…'}</div>
+    <button type="button" class="maya-btn w-full mt-3" onclick="refreshSystem()">Atualizar sistema</button>
+    <p class="text-xs mt-2" style="color:var(--muted)">Se a tela parecer antiga, toque aqui. Limpa o cache do celular e recarrega a versão nova.</p>
+  </div>
   <div class="maya-card p-4 mb-3 anim-in" style="opacity:1">
     <h2 class="font-extrabold mb-1">Preços por metro quadrado</h2>
     <p class="text-xs mb-3" style="color:var(--muted)">Quanto você cobra por m². O orçamento usa o valor <b>Você cobra</b> no cálculo. Piso = não cobrar menos. Teto = não passar disso.</p>
@@ -962,9 +982,9 @@ function viewConfig(){
       <b>${name}</b>
       <p class="price-help">${help}</p>
       <div class="price-trio ${min?'':'one'}">
-        ${min?`<label>Piso R$/m²<input ${disabled} type="number" step="any" min="0" id="p-${min}" class="maya-input" value="${esc(p[min])}"></label>`:''}
-        <label>Você cobra R$/m²<input ${disabled} type="number" step="any" min="0" id="p-${ideal}" class="maya-input" value="${esc(p[ideal])}"></label>
-        ${max?`<label>Teto R$/m²<input ${disabled} type="number" step="any" min="0" id="p-${max}" class="maya-input" value="${esc(p[max])}"></label>`:''}
+        ${min?`<label>Piso R$/m²<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-${min}" class="maya-input" value="${esc(p[min])}"></label>`:''}
+        <label>Você cobra R$/m²<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-${ideal}" class="maya-input" value="${esc(p[ideal])}"></label>
+        ${max?`<label>Teto R$/m²<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-${max}" class="maya-input" value="${esc(p[max])}"></label>`:''}
       </div>
     </div>`).join('')}
     <button ${disabled} class="maya-btn mt-3 w-full" onclick="savePricing()">Salvar preços por m²</button>
@@ -977,8 +997,8 @@ function viewConfig(){
     <label class="font-bold col-span-2">Modelo msg WhatsApp <span class="font-normal" style="color:var(--muted)">({nome} {numero} {total} {validade} {empresa})</span><textarea ${disabled} id="s-zapTemplate" class="maya-textarea" rows="2">${esc(st.zapTemplate||'')}</textarea></label>
     <label class="font-bold col-span-2">Modelo msg retorno <span class="font-normal" style="color:var(--muted)">({nome} {numero} {total} {dias} {empresa})</span><textarea ${disabled} id="s-zapFollow" class="maya-textarea" rows="2">${esc(st.zapFollow||'')}</textarea></label>
     <label class="font-bold">Validade padrão dias<input ${disabled} type="number" id="s-validityDays" class="maya-input" value="${esc(st.validityDays)}"></label>
-    <label class="font-bold">Sinal padrão %<input ${disabled} type="number" id="s-signalPct" class="maya-input" value="${esc(st.signalPct)}"></label>
-    <label class="font-bold">Desloc padrão R$<input ${disabled} type="number" id="s-displacementDefault" class="maya-input" value="${esc(st.displacementDefault)}"></label>
+    <label class="font-bold">Sinal padrão %<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="s-signalPct" class="maya-input" value="${esc(st.signalPct)}"></label>
+    <label class="font-bold">Desloc padrão R$<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="s-displacementDefault" class="maya-input" value="${esc(st.displacementDefault)}"></label>
     </div>
     <div class="mt-2 text-sm grid grid-cols-3 gap-2">
       <label class="font-bold">Opacidade marca<input ${disabled} type="number" step="0.01" min="0" max="0.3" id="s-wmOpacity" class="maya-input" value="${esc(st.wmOpacity)}"></label>
@@ -994,42 +1014,42 @@ function viewConfig(){
       <b>Mão de obra por hora</b>
       <p class="price-help">Jardineiro em campo. Ex: 4 horas × R$ 55 = R$ 220.</p>
       <div class="price-trio">
-        <label>Piso R$/hora<input ${disabled} type="number" step="any" min="0" id="p-horaMin" class="maya-input" value="${esc(p.horaMin)}"></label>
-        <label>Você cobra R$/hora<input ${disabled} type="number" step="any" min="0" id="p-horaIdeal" class="maya-input" value="${esc(p.horaIdeal)}"></label>
-        <label>Teto R$/hora<input ${disabled} type="number" step="any" min="0" id="p-horaMax" class="maya-input" value="${esc(p.horaMax)}"></label>
+        <label>Piso R$/hora<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-horaMin" class="maya-input" value="${esc(p.horaMin)}"></label>
+        <label>Você cobra R$/hora<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-horaIdeal" class="maya-input" value="${esc(p.horaIdeal)}"></label>
+        <label>Teto R$/hora<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-horaMax" class="maya-input" value="${esc(p.horaMax)}"></label>
       </div>
     </div>
     <div class="price-group">
       <b>Replantio de orquídea</b>
       <p class="price-help">Por vaso, com substrato.</p>
       <div class="price-trio">
-        <label>Piso R$/vaso<input ${disabled} type="number" step="any" min="0" id="p-vasoMin" class="maya-input" value="${esc(p.vasoMin)}"></label>
-        <label>Você cobra R$/vaso<input ${disabled} type="number" step="any" min="0" id="p-vasoIdeal" class="maya-input" value="${esc(p.vasoIdeal)}"></label>
-        <label>Teto R$/vaso<input ${disabled} type="number" step="any" min="0" id="p-vasoMax" class="maya-input" value="${esc(p.vasoMax)}"></label>
+        <label>Piso R$/vaso<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-vasoMin" class="maya-input" value="${esc(p.vasoMin)}"></label>
+        <label>Você cobra R$/vaso<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-vasoIdeal" class="maya-input" value="${esc(p.vasoIdeal)}"></label>
+        <label>Teto R$/vaso<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-vasoMax" class="maya-input" value="${esc(p.vasoMax)}"></label>
       </div>
     </div>
     <div class="price-group">
       <b>Visita ao orquidário</b>
       <p class="price-help">Manutenção pontual: limpeza, adubo e fitossanitário.</p>
       <div class="price-trio">
-        <label>Piso R$/visita<input ${disabled} type="number" step="any" min="0" id="p-visitaOrqMin" class="maya-input" value="${esc(p.visitaOrqMin)}"></label>
-        <label>Você cobra R$/visita<input ${disabled} type="number" step="any" min="0" id="p-visitaOrqIdeal" class="maya-input" value="${esc(p.visitaOrqIdeal)}"></label>
-        <label>Teto R$/visita<input ${disabled} type="number" step="any" min="0" id="p-visitaOrqMax" class="maya-input" value="${esc(p.visitaOrqMax)}"></label>
+        <label>Piso R$/visita<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-visitaOrqMin" class="maya-input" value="${esc(p.visitaOrqMin)}"></label>
+        <label>Você cobra R$/visita<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-visitaOrqIdeal" class="maya-input" value="${esc(p.visitaOrqIdeal)}"></label>
+        <label>Teto R$/visita<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-visitaOrqMax" class="maya-input" value="${esc(p.visitaOrqMax)}"></label>
       </div>
     </div>
     <div class="price-group">
       <b>Orquidário completo</b>
       <p class="price-help">Projeto fechado (estrutura, tela, vasos iniciais).</p>
       <div class="price-trio">
-        <label>Piso R$<input ${disabled} type="number" step="any" min="0" id="p-orquidarioMin" class="maya-input" value="${esc(p.orquidarioMin)}"></label>
-        <label>Você cobra R$<input ${disabled} type="number" step="any" min="0" id="p-orquidarioIdeal" class="maya-input" value="${esc(p.orquidarioIdeal)}"></label>
-        <label>Teto R$<input ${disabled} type="number" step="any" min="0" id="p-orquidarioMax" class="maya-input" value="${esc(p.orquidarioMax)}"></label>
+        <label>Piso R$<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-orquidarioMin" class="maya-input" value="${esc(p.orquidarioMin)}"></label>
+        <label>Você cobra R$<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-orquidarioIdeal" class="maya-input" value="${esc(p.orquidarioIdeal)}"></label>
+        <label>Teto R$<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-orquidarioMax" class="maya-input" value="${esc(p.orquidarioMax)}"></label>
       </div>
     </div>
     <div class="price-group">
       <b>Margem da empresa</b>
       <p class="price-help">Percentual em cima do custo quando a dica não usa m² nem hora. 30 = 30%.</p>
-      <label class="font-bold">Margem %<input ${disabled} type="number" step="any" min="0" id="p-marginPct" class="maya-input" value="${esc(p.marginPct)}"></label>
+      <label class="font-bold">Margem %<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-marginPct" class="maya-input" value="${esc(p.marginPct)}"></label>
     </div>
     <button ${disabled} class="maya-btn mt-3 w-full" onclick="savePricing()">Salvar esses preços</button>
     ${write?`<details class="more-opts mt-3"><summary>Zona de perigo</summary>
@@ -1041,16 +1061,33 @@ function viewConfig(){
     </details>`:'<div class="mt-4 text-xs" style="color:var(--muted)">Perfil visitante: somente visualização.</div>'}
   </div></div>`;
 }
+
+window.refreshSystem = async function(){
+  toast('Atualizando o sistema…');
+  try{
+    if('serviceWorker' in navigator){
+      const rs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(rs.map(r=>r.unregister()));
+    }
+    if(window.caches){
+      const ks = await caches.keys();
+      await Promise.all(ks.map(k=>caches.delete(k)));
+    }
+  }catch(e){}
+  const u = new URL(location.href);
+  u.searchParams.set('v', String(Date.now()));
+  location.replace(u.toString());
+};
 window.confirmReset=async ()=>{ if(!window.MayaAuth?.canWrite?.()){ toast('Acesso somente para visualização.'); return; } if(!await confirmModal('Apagar tudo','Todos os dados compartilhados serão apagados da nuvem. Deseja continuar?','Apagar tudo'))return; Store.resetAll(); await window.CloudSync?.pushLocal?.(false); location.hash='#/'; location.reload(); };
 window.saveSettings=()=>{
   if(!window.MayaAuth?.canWrite?.()){ toast('Acesso somente para visualização.'); return; }
   const st=Store.settings;
   ['company','tagline','cnpj','email','whatsappDisplay','whatsappLink','instagram','address','pix','headerText','footerText','terms','zapTemplate','zapFollow'].forEach(k=>st[k]=$('#s-'+k).value);
-  st.validityDays=Number($('#s-validityDays').value||15); st.signalPct=Number($('#s-signalPct').value||0); st.displacementDefault=Number($('#s-displacementDefault').value||0);
-  st.wmOpacity=Number($('#s-wmOpacity').value||0.09); st.wmSizePct=Number($('#s-wmSizePct').value||60); st.wmEnabled=$('#s-wmEnabled').value==='1';
+  st.validityDays=numBR($('#s-validityDays').value)||15; st.signalPct=numBR($('#s-signalPct').value); st.displacementDefault=numBR($('#s-displacementDefault').value);
+  st.wmOpacity=numBR($('#s-wmOpacity').value)||0.09; st.wmSizePct=numBR($('#s-wmSizePct').value)||60; st.wmEnabled=$('#s-wmEnabled').value==='1';
   Store.settings=st; toast('Empresa salva!'); render();
 };
-window.savePricing=()=>{ if(!window.MayaAuth?.canWrite?.()){ toast('Acesso somente para visualização.'); return; } const p=Store.pricing; $$('[id^="p-"]').forEach(i=>{ p[i.id.slice(2)]=Number(i.value)||0; }); Store.pricing=p; toast('Preços salvos!'); };
+window.savePricing=()=>{ if(!window.MayaAuth?.canWrite?.()){ toast('Acesso somente para visualização.'); return; } const p=Store.pricing; $$('[id^="p-"]').forEach(i=>{ p[i.id.slice(2)]=numBR(i.value); }); Store.pricing=p; toast('Preços salvos!'); };
 
 /* ---------- backup local ---------- */
 window.exportBackup=()=>{
