@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>MAYA Garden Pro — Orçamentos</title>
 <meta name="description" content="Gerador e gerenciador de orçamentos MAYA Garden — Jardinagem, Orquídeas, Paisagismo em Petrópolis-RJ"/>
-<meta name="maya-build" content="37"/>
+<meta name="maya-build" content="38"/>
+<meta name="theme-color" content="#0C120C"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -13,12 +14,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="manifest" href="manifest.json"/>
+<link rel="manifest" href="/manifest.json"/>
 <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png"/>
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png"/>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="styles.css?v=23"/>
+<link rel="stylesheet" href="styles.css?v=24"/>
 <script src="gsap.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js';document.head.appendChild(s)"></script>
 <script src="jspdf.umd.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';document.head.appendChild(s)"></script>
 <script>
@@ -55,28 +56,72 @@ window.addEventListener('DOMContentLoaded',function(){
 </head>
 <body>
 <div id="errbox" role="alert" aria-live="assertive" style="display:none;background:#a11a1a;color:#fff;padding:10px;font:700 13px sans-serif"></div>
+<div id="pwa-banner" hidden></div>
 <div id="app"><div class="max-w-6xl mx-auto p-8 text-center">Carregando MAYA Garden…</div></div>
 <script src="store.js?v=10"></script>
-<script src="cloud.js?v=9"></script>
+<script src="cloud.js?v=10"></script>
 <script src="pricing.js?v=7"></script>
 <script src="pdf.js?v=14"></script>
 <script src="app.js?v=37"></script>
-<script src="pro.js?v=22"></script>
+<script src="pro.js?v=23"></script>
 <script src="reminders.js?v=5"></script>
 <script src="mobile-pdf.js?v=4"></script>
 <script>
 window._pwaPrompt=null;
-window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window._pwaPrompt=e;window.dispatchEvent(new Event('maya-pwa-ready'));});
-window.addEventListener('appinstalled',function(){window._pwaPrompt=null;});
+function __mayaStandalone(){
+  try{ return matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone===true; }catch(e){ return false; }
+}
+function __mayaInApp(){
+  var ua=navigator.userAgent||'';
+  return /FBAN|FBAV|Instagram|Line\/|Twitter|WhatsApp|GSA\/|; wv\)|WebView/i.test(ua);
+}
+function __mayaPaintBanner(){
+  var el=document.getElementById('pwa-banner');
+  if(!el || __mayaStandalone()){ if(el){ el.hidden=true; el.innerHTML=''; } document.body.classList.remove('has-pwa-banner'); return; }
+  try{ if(sessionStorage.getItem('maya_pwa_hide')==='1'){ el.hidden=true; document.body.classList.remove('has-pwa-banner'); return; } }catch(e){}
+  var ua=navigator.userAgent||'';
+  var android=/Android/i.test(ua);
+  var ios=/iPhone|iPad|iPod/i.test(ua);
+  var html='';
+  var x='<button type="button" class="pwa-x" onclick="try{sessionStorage.setItem(\'maya_pwa_hide\',\'1\')}catch(e){};var b=document.getElementById(\'pwa-banner\');if(b){b.hidden=true;}document.body.classList.remove(\'has-pwa-banner\')">×</button>';
+  if(window._pwaPrompt){
+    html='<b>Instalar o app</b><span>Fica na tela inicial, igual um aplicativo.</span><button type="button" onclick="installApp()">Instalar</button>'+x;
+  } else if(__mayaInApp()){
+    html='<b>Abra no Chrome</b><span>A busca do Google e o WhatsApp não instalam. Abra no Chrome.</span><button type="button" onclick="openInChrome()">Abrir no Chrome</button>'+x;
+  } else if(android){
+    html='<b>Instalar o app</b><span>Chrome → menu ⋮ → Instalar app.</span><button type="button" onclick="installApp()">Como instalar</button>'+x;
+  } else if(ios){
+    html='<b>Instalar o app</b><span>Safari → Compartilhar → Adicionar à Tela de Início.</span><button type="button" onclick="installApp()">Como instalar</button>'+x;
+  } else {
+    html='<b>Instalar o app</b><span>Chrome ou Edge: menu ⋮ → Instalar MAYA Garden.</span><button type="button" onclick="installApp()">Instalar</button>'+x;
+  }
+  el.innerHTML=html;
+  el.hidden=false;
+  document.body.classList.add('has-pwa-banner');
+}
+window.openInChrome=function(){
+  var host=location.host+location.pathname+location.search;
+  location.href='intent://'+host+'#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(location.href)+';end';
+};
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();
+  window._pwaPrompt=e;
+  window.dispatchEvent(new Event('maya-pwa-ready'));
+  __mayaPaintBanner();
+});
+window.addEventListener('appinstalled',function(){
+  window._pwaPrompt=null;
+  __mayaPaintBanner();
+});
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
-  window.addEventListener('load',function(){
-    navigator.serviceWorker.register('./sw.js?v=12').then(function(reg){try{reg.update();}catch(e){}}).catch(function(){});
-    navigator.serviceWorker.addEventListener('controllerchange', function(){
-      try{ if(sessionStorage.getItem('maya_sw_reload')==='1') return; sessionStorage.setItem('maya_sw_reload','1'); }catch(e){}
-      location.reload();
-    });
+  navigator.serviceWorker.register('/sw.js',{scope:'/'}).then(function(reg){try{reg.update();}catch(e){}}).catch(function(){});
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    try{ if(sessionStorage.getItem('maya_sw_reload')==='1') return; sessionStorage.setItem('maya_sw_reload','1'); }catch(e){}
+    location.reload();
   });
 }
+window.addEventListener('DOMContentLoaded', __mayaPaintBanner);
+setTimeout(__mayaPaintBanner, 1200);
 </script>
 </body>
 </html>

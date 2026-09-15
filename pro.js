@@ -448,18 +448,26 @@ window.isStandalone = function(){
 window.installApp = async ()=>{
   if(window.isStandalone()){ toast('O app já está instalado.'); return; }
   if(window._pwaPrompt){
-    window._pwaPrompt.prompt();
-    try{ await window._pwaPrompt.userChoice; }catch(e){}
+    try{
+      window._pwaPrompt.prompt();
+      await window._pwaPrompt.userChoice;
+    }catch(e){}
     window._pwaPrompt=null;
+    if(typeof __mayaPaintBanner==='function') __mayaPaintBanner();
     return;
   }
   const ua=navigator.userAgent||'';
+  if(typeof __mayaInApp==='function' && __mayaInApp()){
+    if(typeof openInChrome==='function') openInChrome();
+    else toast('Abra este site no Chrome para instalar.');
+    return;
+  }
   if(/iPhone|iPad|iPod/i.test(ua)){
-    toast('No iPhone: toque em Compartilhar e depois em Adicionar à Tela de Início.');
+    toast('No iPhone: Safari → Compartilhar → Adicionar à Tela de Início.');
     return;
   }
   if(/Android/i.test(ua)){
-    toast('No Android: menu ⋮ do Chrome → Instalar app (ou Adicionar à tela inicial).');
+    toast('No Chrome: toque em ⋮ no canto e depois em Instalar app.');
     return;
   }
   toast('No Chrome ou Edge: menu ⋮ → Instalar MAYA Garden.');

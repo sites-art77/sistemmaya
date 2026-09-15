@@ -1,20 +1,22 @@
 {
-  "id": "/",
-  "name": "MAYA Garden Pro — Orçamentos",
+  "id": "/maya-garden",
+  "name": "MAYA Garden",
   "short_name": "MAYA Garden",
-  "description": "Gerador e gerenciador de orçamentos — Jardinagem, Orquídeas, Paisagismo em Petrópolis-RJ",
+  "description": "Orçamentos de jardinagem, orquídeas e paisagismo — Petrópolis-RJ",
   "lang": "pt-BR",
   "dir": "ltr",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#0C120C",
   "theme_color": "#0C120C",
+  "prefer_related_applications": false,
   "categories": ["business", "productivity"],
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
