@@ -86,6 +86,10 @@ function dashProHTML(){
   return `
   ${heroHtml}
   ${dueHtml}
+  ${pend.length?`<div class="maya-card p-4 mb-3 anim-in"><div class="quote-board-h"><h2>Aguardando decisão <span>${pend.length}</span></h2><p>PDFs gerados. Aprove, recuse, altere ou apague.</p></div>
+    <div class="grid md:grid-cols-2 gap-3">${pend.slice(0,4).map(quoteActionCard).join('')}</div>
+    ${pend.length>4?`<a class="text-sm font-bold mt-2 inline-block" style="color:var(--maya-accent)" href="#/orcamentos">Ver todos →</a>`:''}
+  </div>`:''}
   ${!budgets.length?`<div class="maya-card p-5 mb-3 anim-in" style="border-color:#4CAF50">
     <div class="font-black text-lg">Bem-vindo à MAYA Garden</div>
     <p class="text-sm mb-2" style="color:var(--muted)">Aqui entram só os orçamentos, clientes e visitas que a equipe criar.</p>

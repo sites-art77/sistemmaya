@@ -368,7 +368,7 @@ function viewEditor(isEdit){
     <span class="maya-badge b-${d.status}">${d.status}</span>
     <div class="flex-1"></div>
     <div class="budget-editor-actions">
-      <button class="maya-btn-ghost" onclick="location.hash='#/orcamentos'">← Voltar</button>
+      <button class="maya-btn-ghost editor-back" onclick="location.hash='#/orcamentos'">← Voltar</button>
       <button class="maya-btn" ${onCall('saveDraft', isEdit)}>Salvar</button>
       <button class="maya-btn-ghost" onclick="doPDF()">Baixar PDF</button>
     </div>
@@ -920,21 +920,10 @@ window.applyTip = v=>{
 };
 
 /* ---------- lista ---------- */
-function viewList(){
-  return `<div class="flex gap-2 flex-wrap items-center mb-3 anim-in">
-    <h1 class="text-2xl font-black">Orçamentos</h1><div class="flex-1"></div>
-    <input id="q" class="maya-input cat-search !w-full md:!w-56" placeholder="Buscar cliente ou número…" oninput="renderList()">
-    <select id="f" class="maya-select !w-full md:!w-40" onchange="renderList()"><option value="">todos</option>${['pendente','aprovado','recusado','expirado'].map(s=>`<option>${s}</option>`).join('')}</select>
-    <a href="#/novo" class="maya-btn text-sm">+ Novo</a></div>
-  <div id="list" class="grid md:grid-cols-2 gap-3"></div>`;
-}
-window.renderList = ()=>{
-  sweepExpired();
-  const q = ($('#q')?.value||'').toLowerCase(), f = $('#f')?.value||'';
-  let arr = [...(Store.budgets||[])].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
-  if(q) arr = arr.filter(b=>(b.client?.name+' '+b.number+' '+(b.client?.phone||'')).toLowerCase().includes(q));
-  if(f) arr = arr.filter(b=>effStatus(b)===f);
-  $('#list').innerHTML = arr.map(b=>{const es=effStatus(b); return `<div class="maya-card quote-card p-4 anim-in" style="opacity:1">
+function quoteActionCard(b){
+  const es=effStatus(b);
+  const wait=es==='pendente';
+  return `<div class="maya-card quote-card p-4 anim-in" style="opacity:1">
     <a class="quote-main" href="#/editar/${b.id}">
       <div class="flex items-center gap-2"><b>Nº ${esc(b.number)}</b><span class="maya-badge b-${es}">${es}</span><div class="flex-1"></div><b class="quote-total">${brl(b.total)}</b></div>
       <div class="quote-who">${esc(b.client?.name||'Sem cliente')}</div>
@@ -943,11 +932,50 @@ window.renderList = ()=>{
     </a>
     <div class="quote-card-actions">
       <button type="button" class="maya-btn" ${onCall('pdfBudget', b.id)}>PDF</button>
-      <button type="button" class="maya-btn-ghost" ${onCall('openZapBudget', b.id)}>WhatsApp</button>
-      ${es!=='aprovado'?`<button type="button" class="maya-btn-ghost" ${onCall('setStatus', b.id, 'aprovado')}>Aprovado</button>`:''}
+      <a class="maya-btn-ghost" href="#/editar/${b.id}">Alterar</a>
+      ${wait?`<button type="button" class="maya-btn-ghost" ${onCall('setStatus', b.id, 'aprovado')}>Aprovado</button>
+      <button type="button" class="maya-btn-ghost" ${onCall('setStatus', b.id, 'recusado')}>Recusado</button>`:''}
       <button type="button" class="maya-btn-ghost visit-del" ${onCall('delBudget', b.id)}>Apagar</button>
     </div>
-  </div>`;}).join('') || emptyState('Nada por aqui','Nenhum orçamento com este filtro. Crie o primeiro em segundos.','Novo orçamento','#/novo');
+  </div>`;
+}
+function quoteSection(title, sub, list){
+  if(!list.length) return '';
+  return `<section class="quote-board mb-4">
+    <div class="quote-board-h"><h2>${esc(title)} <span>${list.length}</span></h2>${sub?`<p>${esc(sub)}</p>`:''}</div>
+    <div class="grid md:grid-cols-2 gap-3">${list.map(quoteActionCard).join('')}</div>
+  </section>`;
+}
+function viewList(){
+  return `<div class="flex gap-2 flex-wrap items-center mb-3 anim-in">
+    <h1 class="text-2xl font-black">Orçamentos</h1><div class="flex-1"></div>
+    <input id="q" class="maya-input cat-search !w-full md:!w-56" placeholder="Buscar cliente ou número…" oninput="renderList()">
+    <select id="f" class="maya-select !w-full md:!w-40" onchange="renderList()"><option value="">todos</option>${['pendente','aprovado','recusado','expirado'].map(s=>`<option>${s}</option>`).join('')}</select>
+    <a href="#/novo" class="maya-btn text-sm">+ Novo</a></div>
+  <div id="list"></div>`;
+}
+window.renderList = ()=>{
+  sweepExpired();
+  const q = ($('#q')?.value||'').toLowerCase(), f = $('#f')?.value||'';
+  let arr = [...(Store.budgets||[])].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+  if(q) arr = arr.filter(b=>(b.client?.name+' '+b.number+' '+(b.client?.phone||'')).toLowerCase().includes(q));
+  if(f) arr = arr.filter(b=>effStatus(b)===f);
+  const box=$('#list'); if(!box) return;
+  if(!arr.length){
+    box.innerHTML = emptyState('Nada por aqui','Nenhum orçamento com este filtro. Crie o primeiro em segundos.','Novo orçamento','#/novo');
+    return;
+  }
+  if(f){
+    box.innerHTML = `<div class="grid md:grid-cols-2 gap-3">${arr.map(quoteActionCard).join('')}</div>`;
+    return;
+  }
+  const wait=arr.filter(b=>effStatus(b)==='pendente');
+  const ok=arr.filter(b=>effStatus(b)==='aprovado');
+  const no=arr.filter(b=>effStatus(b)==='recusado'||effStatus(b)==='expirado');
+  box.innerHTML =
+    quoteSection('Aguardando decisão', 'PDFs já gerados. Marque aprovado, recusado, altere ou apague.', wait) +
+    quoteSection('Aprovados', '', ok) +
+    quoteSection('Recusados e expirados', '', no);
 };
 window.quoteMore=id=>{
   const b=(Store.budgets||[]).find(x=>x.id===id); if(!b) return;
@@ -971,6 +999,7 @@ window.setStatus = (id,s)=>{
   Store.budgets=a;
   if(Draft && Draft.id===id) Draft.status=s;
   if(typeof renderList==='function' && (location.hash||'').startsWith('#/orcamentos')) renderList();
+  else if(typeof render==='function') render();
   toast('Status: '+s+'.');
 };
 window.delBudget = async id=>{
