@@ -1,4 +1,4 @@
-/* MAYA Garden — PDF no celular: tela “PDF pronto” + botão Baixar */
+/* MAYA Garden — PDF no celular: tela “PDF pronto” + envio no WhatsApp */
 (function () {
   'use strict';
 
@@ -6,7 +6,8 @@
     blob: null,
     filename: '',
     url: null,
-    busy: false
+    busy: false,
+    budget: null
   };
 
   function toast(msg) {
@@ -65,9 +66,31 @@
     document.body.appendChild(root);
   }
 
+  function asciiFileName(name) {
+    const base = String(name || 'orcamento.pdf')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9._-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 72)
+      .replace(/\.pdf$/i, '');
+    return (base || 'orcamento') + '.pdf';
+  }
+
+  async function pdfFile() {
+    if (!state.blob) return null;
+    const buf = await state.blob.arrayBuffer();
+    const blob = new Blob([buf], { type: 'application/pdf' });
+    return new File([blob], asciiFileName(state.filename), {
+      type: 'application/pdf',
+      lastModified: Date.now()
+    });
+  }
+
   function triggerDownload() {
     if (!state.blob) return;
-    const filename = state.filename || 'orcamento.pdf';
+    const filename = asciiFileName(state.filename);
 
     if (navigator.msSaveOrOpenBlob) {
       navigator.msSaveOrOpenBlob(state.blob, filename);
@@ -86,7 +109,7 @@
     a.remove();
 
     if (isIOS()) {
-      toast('No iPhone: toque em Compartilhar → Salvar em Arquivos.');
+      toast('Se o PDF abrir, toque em Compartilhar e depois Salvar em Arquivos.');
     } else {
       toast('Download do PDF iniciado.');
     }
@@ -99,28 +122,60 @@
     if (!w) toast('O navegador bloqueou a abertura. Use “Baixar PDF”.');
   }
 
+  async function shareFilesOnly() {
+    if (!navigator.share) return false;
+    const file = await pdfFile();
+    if (!file) return false;
+    if (navigator.canShare && !navigator.canShare({ files: [file] })) return false;
+    /* iOS/WhatsApp falha se mandar text/title junto com o arquivo */
+    await navigator.share({ files: [file] });
+    return true;
+  }
+
   async function sharePdf() {
     if (!state.blob) return;
     try {
-      const file = new File(
-        [state.blob],
-        state.filename || 'orcamento.pdf',
-        { type: 'application/pdf' }
-      );
-      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-        await navigator.share({
-          title: state.filename || 'Orçamento MAYA Garden',
-          text: 'Orçamento em PDF — MAYA Garden',
-          files: [file]
-        });
-        return;
-      }
+      if (await shareFilesOnly()) return;
     } catch (err) {
       if (err && err.name === 'AbortError') return;
       console.warn('Compartilhamento de PDF indisponível:', err);
     }
     triggerDownload();
-    toast('Compartilhamento direto indisponível. Use Baixar PDF.');
+    toast('Abra o PDF e envie pelo clipe do WhatsApp.');
+  }
+
+  function quoteMessage() {
+    if (state.budget && typeof window.zapFill === 'function') {
+      try { return window.zapFill(state.budget); } catch (_) {}
+    }
+    return 'Segue o orçamento em PDF da MAYA Garden.';
+  }
+
+  async function shareWhatsApp() {
+    if (!state.blob) return;
+    const msg = quoteMessage();
+    try { await navigator.clipboard.writeText(msg); } catch (_) {}
+
+    try {
+      if (await shareFilesOnly()) {
+        toast('Envie só o PDF. A mensagem já foi copiada.');
+        return;
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      console.warn('Share WhatsApp falhou:', err);
+    }
+
+    const phone = state.budget && state.budget.client && state.budget.client.phone;
+    if (typeof window.openZapText === 'function' && phone) {
+      window.openZapText(phone, msg);
+      toast('WhatsApp aberto. Toque no clipe e anexe o PDF.');
+      triggerDownload();
+      return;
+    }
+
+    triggerDownload();
+    toast('Baixe o PDF, abra o WhatsApp e anexe pelo clipe.');
   }
 
   function canShareFiles() {
@@ -135,9 +190,9 @@
   }
 
   function escapeHtml(s) {
-    return String(s || '').replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
+    return String(s || '').replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
   }
 
   function showPdfReady(blob, filename) {
@@ -150,6 +205,7 @@
     const url = ensureUrl();
     const shareOk = canShareFiles();
     const ios = isIOS();
+    const safeName = asciiFileName(state.filename);
 
     const root = document.createElement('div');
     root.id = 'pdf-ready-root';
@@ -157,34 +213,31 @@
       <div class="pdf-ready-backdrop" role="presentation"></div>
       <section class="pdf-ready-sheet" role="dialog" aria-modal="true" aria-labelledby="pdf-ready-title">
         <div class="pdf-ready-handle" aria-hidden="true"></div>
-        <div class="pdf-ready-icon" aria-hidden="true">✓</div>
+        <div class="pdf-ready-icon" aria-hidden="true">OK</div>
         <h2 id="pdf-ready-title">PDF pronto</h2>
-        <p class="pdf-ready-sub">Seu orçamento foi gerado. Toque em Baixar PDF.</p>
-        <div class="pdf-ready-file" title="${escapeHtml(state.filename)}">
-          <span aria-hidden="true">📄</span>
-          <strong>${escapeHtml(state.filename)}</strong>
+        <p class="pdf-ready-sub">Toque em Enviar no WhatsApp ou Baixar PDF.</p>
+        <div class="pdf-ready-file" title="${escapeHtml(safeName)}">
+          <span aria-hidden="true">PDF</span>
+          <strong>${escapeHtml(safeName)}</strong>
         </div>
 
-        <a class="pdf-ready-primary" id="pdf-ready-download" href="${url}" download="${escapeHtml(state.filename)}" target="_blank" rel="noopener">
-          <span aria-hidden="true">⬇</span>
+        <button type="button" class="pdf-ready-primary" id="pdf-ready-whatsapp">
+          <span>Enviar no WhatsApp</span>
+        </button>
+
+        <a class="pdf-ready-secondary pdf-ready-full" id="pdf-ready-download" href="${url}" download="${escapeHtml(safeName)}" target="_blank" rel="noopener">
           <span>Baixar PDF</span>
         </a>
 
         <div class="pdf-ready-grid">
-          <button type="button" class="pdf-ready-secondary" id="pdf-ready-open">
-            <span aria-hidden="true">↗</span>
-            <span>Abrir</span>
-          </button>
-          <button type="button" class="pdf-ready-secondary" id="pdf-ready-share">
-            <span aria-hidden="true">⇧</span>
-            <span>Compartilhar</span>
-          </button>
+          <button type="button" class="pdf-ready-secondary" id="pdf-ready-open">Abrir</button>
+          <button type="button" class="pdf-ready-secondary" id="pdf-ready-share">Compartilhar</button>
         </div>
 
         <p class="pdf-ready-tip">
           ${ios
-            ? 'No iPhone: toque em Compartilhar e escolha “Salvar em Arquivos” ou WhatsApp.'
-            : 'O arquivo entra na pasta de Downloads. Depois você pode enviar no WhatsApp.'}
+            ? 'No iPhone: envie só o arquivo, sem legenda. Se o WhatsApp recusar, baixe o PDF e anexe pelo clipe.'
+            : 'O arquivo entra em Downloads. Depois você pode enviar no WhatsApp.'}
         </p>
         <button type="button" class="pdf-ready-close" id="pdf-ready-close">Fechar</button>
       </section>
@@ -200,6 +253,7 @@
     });
     root.querySelector('#pdf-ready-open').addEventListener('click', openPdf);
     root.querySelector('#pdf-ready-share').addEventListener('click', sharePdf);
+    root.querySelector('#pdf-ready-whatsapp').addEventListener('click', shareWhatsApp);
 
     if (!shareOk) {
       const shareBtn = root.querySelector('#pdf-ready-share');
@@ -207,7 +261,7 @@
       root.querySelector('.pdf-ready-grid').style.gridTemplateColumns = '1fr';
     }
 
-    requestAnimationFrame(() => root.classList.add('show'));
+    requestAnimationFrame(function () { root.classList.add('show'); });
 
     if (!isTouch()) triggerDownload();
   }
@@ -253,7 +307,7 @@
       .pdf-ready-handle{width:44px;height:5px;border-radius:999px;background:#607b66;margin:0 auto 12px;opacity:.7}
       .pdf-ready-icon{
         width:54px;height:54px;border-radius:999px;margin:0 auto 10px;
-        display:grid;place-items:center;font-size:26px;font-weight:900;
+        display:grid;place-items:center;font-size:13px;font-weight:900;letter-spacing:.04em;
         background:#1f7a2b;color:#fff;box-shadow:0 8px 28px rgba(46,125,50,.38);
       }
       .pdf-ready-sheet h2{margin:0;font:900 1.45rem/1.15 Inter,system-ui,sans-serif;color:#fff}
@@ -271,10 +325,11 @@
       .pdf-ready-primary{
         width:100%;min-height:56px;border:0;border-radius:14px;
         display:flex;align-items:center;justify-content:center;gap:9px;
-        color:#fff;background:linear-gradient(180deg,#3aa545,#237b2b);
-        box-shadow:0 10px 25px rgba(37,122,44,.34);box-sizing:border-box;
+        color:#fff;background:linear-gradient(180deg,#25d366,#128c7e);
+        box-shadow:0 10px 25px rgba(18,140,126,.34);box-sizing:border-box;
       }
       .pdf-ready-primary:active,.pdf-ready-secondary:active{transform:scale(.98)}
+      .pdf-ready-full{width:100%;margin-top:9px;box-sizing:border-box}
       .pdf-ready-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}
       .pdf-ready-secondary{
         min-height:48px;border-radius:13px;border:1px solid #376343;
@@ -299,17 +354,17 @@
   }
 
   function improveVisiblePdfButtons() {
-    document.querySelectorAll('button[onclick*="pdfBudget("], button[onclick*="doPDF("]').forEach(btn => {
+    document.querySelectorAll('button[onclick*="pdfBudget("], button[onclick*="doPDF("]').forEach(function (btn) {
       if (btn.dataset.pdfDownloadEnhanced === '1') return;
       btn.dataset.pdfDownloadEnhanced = '1';
       const text = (btn.textContent || '').trim();
-      if (text === 'PDF' || text === 'Baixar PDF') btn.textContent = '⬇ Baixar PDF';
+      if (text === 'PDF' || text === 'Baixar PDF') btn.textContent = 'Baixar PDF';
     });
   }
 
   function installButtonObserver() {
     improveVisiblePdfButtons();
-    const observer = new MutationObserver(() => improveVisiblePdfButtons());
+    const observer = new MutationObserver(function () { improveVisiblePdfButtons(); });
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
@@ -327,6 +382,7 @@
       const original = window[name];
       if (typeof original !== 'function' || original.__mayaMobileWrapped) return typeof original === 'function';
       const wrapped = async function () {
+        if (arguments[0]) state.budget = arguments[0];
         showBusy(name === 'gerarRecibo' ? 'Gerando recibo…' : 'Gerando PDF…');
         try {
           return await original.apply(this, arguments);
@@ -352,7 +408,7 @@
     installButtonObserver();
     if (wrapPdfFns()) return;
     let attempts = 0;
-    const timer = setInterval(() => {
+    const timer = setInterval(function () {
       attempts += 1;
       if (wrapPdfFns() || attempts >= 40) clearInterval(timer);
     }, 250);
@@ -370,6 +426,7 @@
     download: triggerDownload,
     open: openPdf,
     share: sharePdf,
+    whatsapp: shareWhatsApp,
     close: closePdfReady
   };
 })();
