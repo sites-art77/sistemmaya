@@ -918,29 +918,72 @@ window.newForClient = id=>{ const c=Store.clients.find(x=>x.id===id); Draft=norm
 
 /* ---------- catálogo ---------- */
 function viewCatalog(){
-  const cats=[...new Set(Store.catalog.map(c=>c.cat))];
-  return `<div class="flex items-center gap-2 mb-2 anim-in"><h1 class="text-2xl font-black">Catálogo (tudo editável)</h1><div class="flex-1"></div><button class="maya-btn text-sm" onclick="addCat()">+ Novo item</button><button class="maya-btn-ghost text-sm" onclick="resetCat()">↺ Restaurar padrão</button></div>
-  <p class="text-sm text-gray-600 mb-3 anim-in">Troque nome, descrição, unidade e preço. Usado para puxar no orçamento e na dica.</p>
-  <div class="maya-card p-3 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-2 mb-1"><div class="font-extrabold" style="color:var(--maya-accent)">Pacotes prontos</div><div class="flex-1"></div><button class="maya-btn text-xs" onclick="addPackage()">+ Novo pacote</button></div>
-  ${(Store.packages||[]).map(p=>`<div class="flex items-center gap-2 border-b py-1 text-sm" style="border-color:var(--line)"><div class="flex-1"><b>${esc(p.name)}</b><div class="text-xs" style="color:var(--muted)">${esc(p.desc||'')} • ${pl(p.items.length,'item','itens')} • <b style="color:var(--maya-accent)">${brl(packTotal(p))}</b></div></div><button class="maya-btn-ghost text-xs" onclick="editPackage('${p.id}')">Editar</button><button class="maya-btn-ghost text-xs !text-red-700" onclick="delPackage('${p.id}')">Excluir</button></div>`).join('')||'<p class="text-xs" style="color:var(--muted)">Nenhum pacote.</p>'}</div>
-  ${cats.map(cat=>`<div class="maya-card p-3 mb-3 anim-in" style="opacity:1"><div class="font-extrabold text-[#1A5D1A] mb-1">${esc(cat)}</div>
-  ${Store.catalog.filter(c=>c.cat===cat).map(c=>`<div class="grid md:grid-cols-6 gap-1 items-center border-b py-1 text-sm">
-    <input class="maya-input md:col-span-2" value="${esc(c.name)}" onchange="updCat('${c.id}','name',this.value)">
-    <input class="maya-input md:col-span-2" value="${esc(c.desc||'')}" onchange="updCat('${c.id}','desc',this.value)">
-    <input class="maya-input" value="${esc(c.unit)}" onchange="updCat('${c.id}','unit',this.value)">
-    <input type="text" inputmode="decimal" enterkeyhint="done" class="maya-input" value="${esc(c.price)}" onchange="updCat('${c.id}','price',this.value)">
-    <button class="maya-btn-ghost text-xs" onclick="delCat('${c.id}')">Excluir</button></div>`).join('')}</div>`).join('')}`;
+  const q=String(window._catQ||'').toLowerCase().trim();
+  const catF=window._catFilter||'';
+  const all=Store.catalog||[];
+  const cats=[...new Set(all.map(c=>c.cat))];
+  const items=all.filter(c=>{
+    if(catF && c.cat!==catF) return false;
+    if(!q) return true;
+    return (c.name+' '+(c.desc||'')+' '+c.cat+' '+c.unit).toLowerCase().includes(q);
+  });
+  const grouped={}; items.forEach(c=>{ (grouped[c.cat]=grouped[c.cat]||[]).push(c); });
+  const packs=Store.packages||[];
+  const pill=(id,label,n)=>`<button type="button" class="cat-pill${catF===id?' on':''}" onclick="setCatFilter(${JSON.stringify(id)})">${esc(label)}${n!=null?` <span>${n}</span>`:''}</button>`;
+  return `<div class="cat-head anim-in">
+    <h1 class="text-2xl font-black">Catálogo</h1>
+    <button class="maya-btn text-sm" onclick="addCat()">+ Item</button>
+    <button class="maya-btn-ghost text-sm" onclick="addPackage()">+ Pacote</button>
+  </div>
+  <p class="text-sm mb-2" style="color:var(--muted)">Toque em um serviço para editar nome, unidade e preço. Isso entra no orçamento.</p>
+  <input id="cat-q" class="maya-input cat-search" placeholder="Buscar serviço…" value="${esc(window._catQ||'')}" oninput="typeCatQ(this.value)">
+  <div class="cat-pills">${pill('','Todos',all.length)}${cats.map(c=>pill(c,c,all.filter(x=>x.cat===c).length)).join('')}</div>
+  <div class="maya-card p-3 mb-3 anim-in">
+    <div class="font-extrabold mb-2" style="color:var(--maya-accent)">Pacotes prontos</div>
+    ${packs.length?packs.map(p=>`<div class="cat-row pack-row"><div class="info"><b>${esc(p.name)}</b><div class="meta">${esc(p.desc||'')} • ${pl(p.items.length,'item','itens')}</div></div><div class="price">${brl(packTotal(p))}</div><div class="acts"><button class="maya-btn-ghost" onclick="editPackage('${p.id}')">Editar</button><button class="maya-btn-ghost visit-del" onclick="delPackage('${p.id}')">Apagar</button></div></div>`).join(''):'<p class="text-sm" style="color:var(--muted)">Nenhum pacote ainda. Monte um conjunto de serviços para inserir no orçamento de uma vez.</p>'}
+  </div>
+  ${Object.keys(grouped).length?Object.entries(grouped).map(([cat,list])=>`<div class="maya-card p-3 mb-3 anim-in"><div class="font-extrabold mb-1" style="color:var(--maya-accent)">${esc(cat)} <span class="text-xs font-bold" style="color:var(--muted)">${pl(list.length,'serviço','serviços')}</span></div>
+    ${list.map(c=>`<button type="button" class="cat-row cat-item" onclick="editCat('${c.id}')"><div class="info"><b>${esc(c.name)}</b><div class="meta">${esc(c.desc||'—')} • ${esc(c.unit||'un')}</div></div><div class="price">${brl(c.price)}</div></button>`).join('')}
+  </div>`).join(''):emptyState('Nenhum serviço','Nada encontrado nesta busca.','+ Novo item','addCat()')}
+  <p class="text-xs mt-2 mb-4" style="color:var(--muted)"><button type="button" class="maya-btn-ghost text-xs" onclick="resetCat()">Restaurar catálogo padrão</button></p>`;
 }
-window.updCat=(id,f,v)=>{ const a=Store.catalog; const c=a.find(x=>x.id===id); c[f]=(f==='price'?numBR(v):v); Store.catalog=a; toast('Catálogo atualizado'); };
-window.delCat=async id=>{ if(!await confirmModal('Excluir item','Remover este item do catálogo?'))return; Store.catalog=Store.catalog.filter(c=>c.id!==id); render(); };
-window.addCat=()=>{ const cats=[...new Set(Store.catalog.map(c=>c.cat))];
-  openModal('Novo item do catálogo', MF.sel('ct-cat','Categoria',[...cats,'+ Nova categoria…'],cats[0])+MF.text('ct-catnew','Nova categoria (se escolheu + Nova)','','Ex: Irrigação')+MF.text('ct-name','Serviço *','','Ex: Poda de cerca-viva')+MF.area('ct-desc','Descrição','',2)+`<div class="f-row2">`+MF.text('ct-unit','Unidade','un')+MF.num('ct-price','Preço R$ *',100)+`</div>`, ()=>{
-    let cat=mv('ct-cat'); if(cat==='+ Nova categoria…') cat=mv('ct-catnew'); if(!cat) return 'Informe a categoria.';
-    const name=mv('ct-name'); if(!name) return 'Informe o nome do serviço.';
-    const price=numBR(mv('ct-price')); if(price<=0) return 'Informe um preço maior que zero.';
-    const a=Store.catalog; a.push({id:Store.uid(),cat,name,desc:mv('ct-desc'),unit:mv('ct-unit')||'un',price}); Store.catalog=a; render(); toast('Item adicionado!'); return true;
+window.setCatFilter=v=>{ window._catFilter=v||''; render(); const el=document.getElementById('cat-q'); if(el){ el.focus(); const n=el.value.length; try{el.setSelectionRange(n,n);}catch(e){} } };
+window.typeCatQ=v=>{
+  window._catQ=v;
+  clearTimeout(window._catQTimer);
+  window._catQTimer=setTimeout(()=>{
+    const keep=document.getElementById('cat-q');
+    const pos=keep?keep.selectionStart:null;
+    render();
+    const el=document.getElementById('cat-q');
+    if(el){ el.focus(); try{ const n=pos==null?el.value.length:pos; el.setSelectionRange(n,n);}catch(e){} }
+  },180);
+};
+window.updCat=(id,f,v)=>{ const a=Store.catalog; const c=a.find(x=>x.id===id); if(!c) return; c[f]=(f==='price'?numBR(v):v); Store.catalog=a; };
+window.delCat=async id=>{ if(!await confirmModal('Excluir item','Remover este item do catálogo?'))return; Store.catalog=Store.catalog.filter(c=>c.id!==id); render(); toast('Item removido.'); };
+function catForm(c){
+  const cats=[...new Set((Store.catalog||[]).map(x=>x.cat))];
+  return MF.sel('ct-cat','Categoria',[...cats,'+ Nova categoria…'],c?.cat||cats[0])+MF.text('ct-catnew','Nova categoria (se escolheu + Nova)','','Ex: Irrigação')+MF.text('ct-name','Serviço *',c?.name||'','Ex: Poda de cerca-viva')+MF.area('ct-desc','Descrição',c?.desc||'',2)+`<div class="f-row2">`+MF.text('ct-unit','Unidade',c?.unit||'un')+MF.num('ct-price','Preço R$ *',c?.price??0)+`</div>`;
+}
+function catFromForm(existing){
+  let cat=mv('ct-cat'); if(cat==='+ Nova categoria…') cat=mv('ct-catnew'); if(!cat) return 'Informe a categoria.';
+  const name=mv('ct-name'); if(!name) return 'Informe o nome do serviço.';
+  const price=numBR(mv('ct-price')); if(price<=0) return 'Informe um preço maior que zero.';
+  const row={id:existing?.id||Store.uid(),cat,name,desc:mv('ct-desc'),unit:mv('ct-unit')||'un',price};
+  return row;
+}
+window.addCat=()=>{ openModal('Novo serviço', catForm(null), ()=>{
+    const row=catFromForm(null); if(typeof row==='string') return row;
+    const a=Store.catalog; a.push(row); Store.catalog=a; render(); toast('Serviço adicionado!'); return true;
   }); };
-window.resetCat=async ()=>{ if(!await confirmModal('Restaurar catálogo','Voltar à tabela padrão 2026? Suas alterações serão perdidas.','Restaurar'))return; localStorage.removeItem('maya_catalog_v1'); render(); };
+window.editCat=id=>{
+  const a=Store.catalog, c=a.find(x=>x.id===id); if(!c) return;
+  openModal('Editar serviço', catForm(c)+`<button type="button" class="maya-btn-ghost w-full mt-2 visit-del" onclick="closeModal();delCat('${c.id}')">Apagar serviço</button>`, ()=>{
+    const row=catFromForm(c); if(typeof row==='string') return row;
+    Object.assign(c,row); Store.catalog=a; render(); toast('Serviço atualizado!'); return true;
+  });
+};
+window.resetCat=async ()=>{ if(!await confirmModal('Restaurar catálogo','Voltar à tabela padrão 2026? Suas alterações serão perdidas.','Restaurar'))return; localStorage.removeItem('maya_catalog_v1'); Store.catalog=Store.catalog; render(); toast('Catálogo padrão restaurado.'); };
 
 /* ---------- agenda ---------- */
 function viewAgendaLegacy(){
