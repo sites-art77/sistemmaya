@@ -117,7 +117,7 @@ function finishProg(){
   if(window.gsap && !navReduced()){ gsap.killTweensOf(bar); gsap.to(bar,{width:'100%',duration:.22,ease:'power2.in',onComplete:()=>gsap.to(bar,{opacity:0,duration:.3})}); }
   else { bar.style.width='100%'; bar.style.opacity=0; }
 }
-const NAV_ORDER = ['#/','#/orcamentos','#/novo','#/recorrentes','#/os','#/clientes','#/catalogo','#/agenda','#/relatorios','#/config'];
+const NAV_ORDER = ['#/','#/orcamentos','#/novo','#/os','#/clientes','#/catalogo','#/agenda','#/relatorios','#/config'];
 function orderIdx(h){ const i=NAV_ORDER.indexOf(h); if(i>=0) return i; if(String(h).startsWith('#/editar/')) return 1.5; return 99; }
 function transitionTo(){
   if(window._navigating) return;
@@ -143,7 +143,7 @@ function transitionTo(){
 window.addEventListener('hashchange', transitionTo);
 
 const NAV_MAIN = [['#/','Início','⌂'],['#/orcamentos','Orçamentos','▤'],['#/novo','Novo orçamento','+']];
-const NAV_MGMT = [['#/recorrentes','Recorrentes','◔'],['#/os','Ordens de serviço','▣'],['#/clientes','Clientes','○'],['#/catalogo','Catálogo','≡'],['#/agenda','Agenda','▦'],['#/relatorios','Relatórios','◫']];
+const NAV_MGMT = [['#/os','Ordens de serviço','▣'],['#/clientes','Clientes','○'],['#/catalogo','Catálogo','≡'],['#/agenda','Agenda','▦'],['#/relatorios','Relatórios','◫']];
 const NAV_SYS = [['#/config','Configurações','◌']];
 function navActive(h){ const r=currentRoute(); return (h!=='#/'&&r.startsWith(h))||(h==='#/'&&r==='#/'); }
 window.toggleMobileNav = ()=>{
@@ -165,9 +165,8 @@ function shell(active, html){
   const t = todayISO(), mk = t.slice(0,7);
   const nPend = (Store.budgets||[]).filter(b=>effStatus(b)==='pendente').length;
   const nToday = (Store.visits||[]).filter(v=>v.date===t&&v.status!=='concluída').length;
-  const nBill = (Store.contracts||[]).filter(c=>c.active!==false&&(c.lastBilled||'').slice(0,7)!==mk).length;
   const nOS = (Store.os||[]).filter(o=>o.status==='aberta'||o.status==='em execução').length;
-  const badges = {'#/orcamentos':nPend,'#/agenda':nToday,'#/recorrentes':nBill,'#/os':nOS};
+  const badges = {'#/orcamentos':nPend,'#/agenda':nToday,'#/os':nOS};
   const sysNav = window.MayaAuth?.isAdmin?.() ? [...NAV_SYS,['#/admin','Administração','⚙']] : NAV_SYS;
   const sideGroup = (t,arr)=>`<div class="side-group">${t}</div>`+arr.map(([h,l,i])=>`<a href="${h}" class="side-link${navActive(h)?' active':''}"><span class="ico">${i}</span>${l}${badges[h]?`<span class="side-badge">${badges[h]}</span>`:''}</a>`).join('');
   return `
@@ -218,7 +217,7 @@ function render(){
   else if(r.startsWith('#/editar/')){ const id=r.split('/')[2]; const b=(Store.budgets||[]).find(x=>x.id===id); if(!b){ location.hash='#/orcamentos'; return; } Draft = normItems(structuredClone(b)); window._dirty=false; html = viewEditor(true); }
   else if(r.startsWith('#/orcamentos')) html = viewList();
   else if(r.startsWith('#/os')) html = viewOS();
-  else if(r.startsWith('#/recorrentes')) html = viewContracts();
+  else if(r.startsWith('#/recorrentes')){ location.hash='#/'; return; }
   else if(r.startsWith('#/relatorios')) html = viewReports();
   else if(r.startsWith('#/admin')) html = viewAdmin();
   else if(r.startsWith('#/clientes')) html = clientsProHTML('');
@@ -265,10 +264,6 @@ function viewDashboardLegacy(){
   <div class="maya-card p-4 mt-4 anim-in">
     <div class="flex items-center justify-between mb-2"><h2 class="font-extrabold">Últimos orçamentos</h2><a href="#/orcamentos" class="text-sm font-bold text-[#1A5D1A]">ver todos →</a></div>
     ${recent.length? `<div class="overflow-x-auto"><table class="table-maya"><tr><th>Nº</th><th>Cliente</th><th>Total</th><th>Status</th><th></th></tr>${recent.map(b=>`<tr><td class="font-bold">${esc(b.number)}</td><td>${esc(b.client?.name)}</td><td>${brl(b.total)}</td><td><span class="maya-badge b-${b.status}">${b.status}</span></td><td><a class="font-bold text-[#1A5D1A]" href="#/editar/${b.id}">abrir</a></td></tr>`).join('')}</table></div>`:'<p class="text-sm text-gray-600">Nenhum ainda. Clique em Novo orçamento.</p>'}
-  </div>
-  <div class="maya-card p-4 mt-3 anim-in">
-    <h2 class="font-extrabold mb-2">Banco de dados da empresa</h2>
-    <p class="text-sm text-gray-600 mb-2">Os dados ficam salvos automaticamente na nuvem compartilhada.</p>
   </div>`;
 }
 function afterRender(r){

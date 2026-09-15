@@ -79,7 +79,7 @@ function dashProHTML(){
   const hr=new Date().getHours(), greet=hr<12?'Bom dia':hr<18?'Boa tarde':'Boa noite';
   const todayVs=visits.filter(v=>v.date===t&&v.status!=='concluída');
   const firstName=(Store.settings.company||'MAYA Garden').split(' ')[0];
-  const heroSum=pl(pend.length,'orçamento ativo','orçamentos ativos')+' • '+pl(todayVs.length,'visita hoje','visitas hoje',true)+' • '+pl(toBill.length,'cobrança do mês','cobranças do mês',true);
+  const heroSum=pl(pend.length,'orçamento ativo','orçamentos ativos')+' • '+pl(todayVs.length,'visita hoje','visitas hoje',true);
   const heroHtml=`<div class="hero mb-3 anim-in"><span class="orb"></span><span class="orb"></span><span class="orb"></span><h1>${greet}!</h1><p>${heroDate()} — ${heroSum}.</p></div>`;
   return `
   ${heroHtml}
@@ -89,8 +89,7 @@ function dashProHTML(){
     <div class="flex gap-2 flex-wrap"><a href="#/novo" class="maya-btn text-sm">+ Novo orçamento</a><button class="maya-btn-ghost text-sm" onclick="seedSample()">Carregar exemplo</button></div></div>`:''}
   <div class="dashboard-kpis grid grid-cols-2 md:grid-cols-4 gap-2">
     ${kpi('Faturado no mês','k-fat',fatM,1)}${kpi('Recebido no mês','k-rec',recMes,1)}
-    ${kpi('A receber','k-arec',aReceber,1)}${kpi('MRR recorrente','k-mrr',mrr,1)}
-    ${kpi('Ticket médio','k-tick',ticket,1)}${kpi('Conversão','k-conv',Math.round(conv)+'%',0)}
+    ${kpi('A receber','k-arec',aReceber,1)}${kpi('Ticket médio','k-tick',ticket,1)}
     ${kpi('Potencial pendente','k-pend',pendV,1)}${kpi('Retomar contato','k-fol',follows.length,0)}
   </div>
   <div class="grid lg:grid-cols-5 gap-3 mt-3">
@@ -105,21 +104,9 @@ function dashProHTML(){
     <div class="maya-card p-4 anim-in"><h2 class="font-extrabold mb-2">Próximas visitas</h2>
       ${upcoming.length?upcoming.map(v=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1"><b>${fmtD(v.date)}</b> ${esc(v.time||'')} — ${esc(v.client)}<div class="text-xs" style="color:var(--muted)">${esc(v.service||'')}</div></div><button class="maya-btn-ghost text-xs px-2 py-1" onclick="toggleVisit('${v.id}')">✓</button></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Sem visitas agendadas. <a class="font-bold" style="color:var(--maya-accent)" href="#/agenda">Agendar →</a></p>'}
     </div>
-    <div class="maya-card p-4 anim-in"><h2 class="font-extrabold mb-2">Cobranças do mês</h2>
-      ${contracts.length?contracts.map(c=>{const billed=monthKey(c.lastBilled||'2000-01')===mk;
-        return `<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1"><b>${esc(c.client?.name||c.title)}</b><div class="text-xs" style="color:var(--muted)">${esc(c.title||'')} • ${brl(c.value)}/mês ${billed?'• <b style="color:var(--maya-accent)">cobrado ✓</b>':''}</div></div>${billed?'':`<button class="maya-btn text-xs px-2 py-1" onclick="billContract('${c.id}')">Gerar</button>`}</div>`;}).join(''):'<p class="text-xs" style="color:var(--muted)">Nenhum contrato ativo. <a class="font-bold" style="color:var(--maya-accent)" href="#/recorrentes">Criar →</a></p>'}
-      ${toBill.length?`<div class="text-xs mt-1 font-bold" style="color:#FFD968">${pl(toBill.length,'cobrança pendente','cobranças pendentes',true)} este mês.</div>`:''}
-    </div>
   </div>
   <div class="maya-card p-4 mt-3 anim-in"><h2 class="font-extrabold mb-2">Retomar contato <span class="text-xs font-normal" style="color:var(--muted)">pendentes há 5+ dias</span></h2>
     ${follows.length?follows.slice(0,5).map(b=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1"><b>${esc(b.client?.name)}</b> <span style="color:var(--muted)">há ${ageDays(b)} dias • ${brl(b.total)}</span></div><button class="maya-btn-ghost text-xs px-2 py-1" onclick="copyFollow('${b.id}')">Copiar</button><button class="maya-btn-ghost text-xs px-2 py-1" onclick="openFollowZap('${b.id}')">WhatsApp</button><a class="maya-btn-ghost text-xs px-2 py-1" href="#/editar/${b.id}">Abrir</a></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Nenhum orçamento parado. Bom ritmo.</p>'}
-  </div>
-  <div class="maya-card p-4 mt-3 anim-in">
-    <div class="flex items-center gap-2 flex-wrap"><h2 class="font-extrabold">Banco de dados da empresa</h2>
-    <span class="maya-badge b-aprovado">nuvem protegida</span><div class="flex-1"></div>
-    <span class="text-xs font-bold" id="spacetext" style="color:var(--muted)">calculando espaço…</span></div>
-    <div class="p-track mt-2"><div class="p-bar" id="spacefill" style="width:2%"></div></div>
-    <p class="text-xs mt-1" style="color:var(--muted)">Os dados ficam compartilhados na nuvem e aparecem conforme o perfil de acesso.</p>
   </div>`;
 }
 function dashAfter(){
@@ -130,7 +117,7 @@ function dashAfter(){
   const pend=budgets.filter(b=>effStatus(b)==='pendente').reduce((s,b)=>s+Number(b.total||0),0);
   const apr=budgets.filter(b=>b.status==='aprovado');
   const tot=apr.reduce((s,b)=>s+Number(b.total||0),0);
-  const map={'k-fat':fat,'k-rec':rec,'k-arec':arec,'k-mrr':mrrTotal(),'k-tick':apr.length?tot/apr.length:0,'k-pend':pend,'k-fol':budgets.filter(needsFollow).length};
+  const map={'k-fat':fat,'k-rec':rec,'k-arec':arec,'k-tick':apr.length?tot/apr.length:0,'k-pend':pend,'k-fol':budgets.filter(needsFollow).length};
   Object.entries(map).forEach(([id,v])=>{const e=document.getElementById(id); if(!e) return; if(id==='k-fol') e.textContent=v; else countUp(e,v); });
   document.querySelectorAll('.donut-total').forEach(el=>{ const v=Number(el.dataset.v||0); el.textContent='0'; if(window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches){ const o={v:0}; gsap.to(o,{v,duration:.9,ease:'power2.out',delay:.25,onUpdate:()=>el.textContent=Math.round(o.v)}); } else el.textContent=v; });
   if(window.gsap && !matchMedia('(prefers-reduced-motion: reduce)').matches){
@@ -479,7 +466,7 @@ function palIndex(){
   (Store.budgets||[]).forEach(b=>out.push({t:`${b.number} — ${b.client?.name||''} — ${brl(b.total)}`, s:'Orçamento', go:`#/editar/${b.id}`}));
   (Store.clients||[]).forEach(c=>out.push({t:`${c.name} — ${c.phone||''}`, s:'Cliente', act:()=>clientDetail(c.id)}));
   (Store.catalog||[]).forEach(c=>out.push({t:`${c.name} — ${brl(c.price)}`, s:'Serviço', go:'#/catalogo'}));
-  [['Novo orçamento','Ação','#/novo'],['Recorrentes','Ação','#/recorrentes'],['Agenda','Ação','#/agenda'],['Relatórios','Ação','#/relatorios'],['Checklist de visita','Ação',null]].forEach(([t,s,go])=>out.push({t,s,go,act:go?null:()=>{closePaletteGo();openChecklist('');}}));
+  [['Novo orçamento','Ação','#/novo'],['Agenda','Ação','#/agenda'],['Relatórios','Ação','#/relatorios'],['Checklist de visita','Ação',null]].forEach(([t,s,go])=>out.push({t,s,go,act:go?null:()=>{closePaletteGo();openChecklist('');}}));
   return out;
 }
 function closePaletteGo(){ const r=document.getElementById('pal-root'); if(r) r.innerHTML=''; }
