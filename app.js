@@ -636,7 +636,13 @@ window.saveDraft = async (isEdit)=>{
   // upsert cliente
   const cs = Store.clients||[];
   if(Draft.client.name && !cs.some(c=>c.name.toLowerCase()===Draft.client.name.toLowerCase())){ cs.push({id:Store.uid(),...Draft.client}); Store.clients=cs; }
-  toast('Orçamento salvo!');
+  toast('Salvando no Supabase…');
+  let cloudOk=true;
+  try{
+    if(window.CloudSync?.flushPush) cloudOk = await window.CloudSync.flushPush();
+    else if(window.CloudSync?.pushLocal) cloudOk = await window.CloudSync.pushLocal(false,true);
+  }catch(e){ cloudOk=false; }
+  toast(cloudOk!==false ? 'Orçamento salvo no Supabase!' : 'Salvo neste aparelho. A nuvem não respondeu.');
   if(window.gsap) gsap.fromTo('.budget-paper',{scale:.99},{scale:1,duration:.3});
   location.hash = '#/orcamentos';
 };
@@ -965,7 +971,7 @@ function viewAdmin(){
 function viewConfig(){
   const st=Store.settings, p=Store.pricing, write=window.MayaAuth?.canWrite?.()!==false, disabled=write?'':'disabled';
   return `<h1 class="text-2xl font-black mb-3 anim-in">Configurações</h1>
-  <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Sessão atual</b><div class="text-xs" style="color:var(--muted)">O sistema exige login e guarda os dados compartilhados na nuvem.</div></div></div><div class="mt-3">${window.CloudSync?.accountHtml?window.CloudSync.accountHtml():'Carregando sessão…'}</div>
+  <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Sessão atual</b><div class="text-xs" style="color:var(--muted)">Conectado ao Supabase. Orçamentos, clientes e catálogo sobem sozinhos para a nuvem.</div></div></div><div class="mt-3">${window.CloudSync?.accountHtml?window.CloudSync.accountHtml():'Carregando sessão…'}</div>
     <button type="button" class="maya-btn w-full mt-3" onclick="installApp()">Instalar no celular ou computador</button>
     <p class="text-xs mt-2" style="color:var(--muted)">iPhone: Safari → Compartilhar → Adicionar à Tela de Início. Android e PC (Chrome/Edge): toque em Instalar.</p>
     <button type="button" class="maya-btn-ghost w-full mt-2" onclick="refreshSystem()">Atualizar sistema</button>

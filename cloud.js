@@ -156,20 +156,24 @@
     sessionVersion++;
     syncing=false; user=null; profile=null; managedUsers=[]; clearLocalCache(); setStatus('Você saiu do sistema.'); emit();
   }
-  async function pushLocal(ask){
-    if(!authenticated()){ say('Entre no sistema antes de continuar.'); return false; }
-    if(!canWrite()){ say('Este acesso é somente para visualização.'); return false; }
+  async function pushLocal(ask, silent){
+    if(!authenticated()){ if(!silent) say('Entre no sistema antes de continuar.'); return false; }
+    if(!canWrite()){ if(!silent) say('Este acesso é somente para visualização.'); return false; }
     if(ask && hasLocalData() && typeof window.confirmModal==='function'){
       const ok=await window.confirmModal('Salvar dados na nuvem','Os dados atuais substituirão a cópia compartilhada da empresa. Deseja continuar?','Salvar');
       if(!ok) return false;
     }
-    syncing=true; setStatus('Salvando dados na nuvem…');
+    if(syncing && silent) return false;
+    syncing=true; setStatus('Salvando no Supabase…');
     const payload=Store.exportBackup();
     const stamp=new Date().toISOString();
     const {data,error}=await client.from(DATA_TABLE).upsert({workspace_id:WORKSPACE_ID,data:payload,updated_at:stamp,updated_by:user.id},{onConflict:'workspace_id'}).select('updated_at').single();
     syncing=false;
-    if(error){ setStatus('Falha ao salvar na nuvem.',accessErrorMessage(error)); say(accessErrorMessage(error)); return false; }
-    remoteUpdatedAt=data?.updated_at||stamp; setStatus(`Dados salvos na nuvem em ${fmtDateTime(remoteUpdatedAt)}.`); say('Dados salvos na nuvem!'); return true;
+    if(error){ setStatus('Falha ao salvar no Supabase.',accessErrorMessage(error)); if(!silent) say(accessErrorMessage(error)); return false; }
+    remoteUpdatedAt=data?.updated_at||stamp; setStatus(`Salvo no Supabase em ${fmtDateTime(remoteUpdatedAt)}.`);
+    if(!silent) say('Salvo no Supabase!');
+    emit();
+    return true;
   }
   async function pullRemote(){
     if(!authenticated()){ say('Entre no sistema antes de continuar.'); return false; }
@@ -185,7 +189,8 @@
     }catch(error){ setStatus('A cópia da nuvem está inválida.',accessErrorMessage(error)); return false; }
     finally{ window.__mayaAuthSyncing=false; syncing=false; emit(); }
   }
-  function schedulePush(){ if(authenticated() && canWrite() && !window.__mayaAuthSyncing){ clearTimeout(pushTimer); pushTimer=setTimeout(()=>pushLocal(false),900); } }
+  function schedulePush(){ if(authenticated() && canWrite() && !window.__mayaAuthSyncing && !syncing){ clearTimeout(pushTimer); pushTimer=setTimeout(()=>pushLocal(false,true),600); } }
+  function flushPush(){ if(!authenticated() || !canWrite()) return Promise.resolve(false); clearTimeout(pushTimer); return pushLocal(false,true); }
 
   async function refreshManagedUsers(){
     if(!isAdmin()) return [];
@@ -243,7 +248,7 @@
     if(!authenticated()) return '<div class="text-sm" style="color:#9a2c2c">Sessão não autenticada.</div>';
     const expiry=profile.expires_at?`Acesso até ${fmtDateTime(profile.expires_at)}.`:'Acesso sem data de expiração.';
     const displayName = profile?.display_name || profile?.username || user?.email || 'usuário';
-    return `<div class="flex items-start gap-3 flex-wrap"><div class="flex-1"><b style="color:var(--maya-accent)">${escCloud(displayName)}</b><div class="text-sm" style="color:var(--muted)">Usuário: ${escCloud(profile?.username||'')} • Perfil: ${escCloud(roleLabel(profile?.role))}<br>${expiry}</div></div><button class="maya-btn-ghost text-sm maya-session-action" onclick="cloudAuthSignOut()">Sair</button></div><div class="flex gap-2 mt-3 flex-wrap"><button class="maya-btn text-sm maya-session-action" onclick="cloudSyncPull()">Atualizar dados</button>${canWrite()?'<button class="maya-btn-ghost text-sm" onclick="cloudSyncPush(true)">Salvar dados agora</button>':''}</div><div class="text-xs mt-2" style="color:var(--muted)">${escCloud(status)}</div>`;
+    return `<div class="flex items-start gap-3 flex-wrap"><div class="flex-1"><b style="color:var(--maya-accent)">${escCloud(displayName)}</b><div class="text-sm" style="color:var(--muted)">Usuário: ${escCloud(profile?.username||'')} • Perfil: ${escCloud(roleLabel(profile?.role))}<br>${expiry}</div></div><button class="maya-btn-ghost text-sm maya-session-action" onclick="cloudAuthSignOut()">Sair</button></div><div class="flex gap-2 mt-3 flex-wrap"><button class="maya-btn text-sm maya-session-action" onclick="cloudSyncPull()">Atualizar dados</button>${canWrite()?'<button class="maya-btn-ghost text-sm" onclick="cloudSyncPush(true)">Salvar agora</button>':''}</div><div class="text-xs mt-2" style="color:var(--muted)">Salva sozinho no Supabase ao criar ou editar orçamentos.<br>${escCloud(status)}</div>`;
   }
   function adminHtml(){
     if(!isAdmin()) return '<div class="maya-card p-4"><b>Acesso restrito</b><p class="text-sm mt-1">Esta área é exclusiva do administrador.</p></div>';
@@ -252,13 +257,15 @@
   }
 
   window.MayaAuth={get ready(){return ready;},get loading(){return loading;},get authenticated(){return authenticated();},get user(){return user;},get profile(){return profile;},get role(){return profile?.role||'';},get status(){return status;},get lastError(){return lastError;},canWrite,isAdmin,roleLabel,usernameToEmail:emailForUsername};
-  window.CloudSync={get ready(){return ready;},get user(){return user;},get profile(){return profile;},get syncing(){return syncing;},get status(){return status;},get managedUsers(){return managedUsers;},authGateHtml,accountHtml,adminHtml,signIn,pushLocal,pullRemote,signOut,refreshManagedUsers,createManagedUser,updateManagedUser,schedulePush};
+  window.CloudSync={get ready(){return ready;},get user(){return user;},get profile(){return profile;},get syncing(){return syncing;},get status(){return status;},get managedUsers(){return managedUsers;},authGateHtml,accountHtml,adminHtml,signIn,pushLocal,pullRemote,signOut,refreshManagedUsers,createManagedUser,updateManagedUser,schedulePush,flushPush};
   window.cloudAuthSignIn=()=>signIn();
   window.cloudAuthSignOut=()=>signOut();
-  window.cloudSyncPush=ask=>pushLocal(ask===true);
+  window.cloudSyncPush=ask=>pushLocal(ask===true, false);
   window.cloudSyncPull=()=>pullRemote();
   window.cloudAdminCreate=()=>createManagedUser();
   window.cloudAdminSave=id=>updateManagedUser(id);
   window.addEventListener('maya-store-changed',schedulePush);
+  window.addEventListener('pagehide',()=>{ flushPush(); });
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') flushPush(); });
   loadClient();
 })();
