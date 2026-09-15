@@ -352,15 +352,18 @@ body.maya-readonly main button[disabled]{opacity:.55;cursor:not-allowed}
 .editor-sticky{display:none}
 @media(max-width:1023px){
   .budget-editor{padding-bottom:108px}
-  .editor-sticky{display:grid;grid-template-columns:1fr 1fr;gap:8px;position:fixed;left:0;right:0;bottom:0;z-index:45;margin:0;padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,rgba(12,18,12,0),#0C120C 34%)}
+  .editor-sticky{display:grid;grid-template-columns:1fr 1fr;gap:8px;position:fixed;left:0;right:0;bottom:var(--kb,0px);z-index:45;margin:0;padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,rgba(12,18,12,0),#0C120C 34%)}
   .editor-sticky button{min-height:48px;font-weight:800}
   .preview-toggle{min-height:46px}
-  body.kb-open .editor-sticky{display:none}
+  body.kb-open .editor-sticky{padding-bottom:12px}
 }
 @media(min-width:1024px){
   .preview-toggle{display:none}
   #preview-wrap{display:block!important}
   .editor-sticky{display:none}
+  .budget-editor-top{position:sticky;top:0;z-index:21;background:linear-gradient(180deg,#0C120C 70%,rgba(12,18,12,0));padding:10px 0 14px}
+  .budget-editor-actions{display:flex;flex-wrap:wrap;gap:8px}
+  .budget-editor-actions button{min-height:42px}
 }
 
 .more-opts{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:.2rem .8rem .8rem;background:#0E160F}
@@ -437,3 +440,19 @@ body.maya-readonly main button[disabled]{opacity:.55;cursor:not-allowed}
 .quote-total,.quote-card .price{color:var(--maya-accent);font-weight:900;white-space:nowrap}
 .quote-card-actions{display:flex;gap:8px;margin-top:10px}
 .quote-card-actions > *{flex:1;min-height:42px;text-decoration:none}
+@media (pointer: coarse){
+  .maya-input,.maya-select,.maya-textarea{font-size:16px}
+  .maya-btn,.maya-btn-ghost,.quote-card-actions > *,.cat-pill,.visit-actions button{min-height:44px}
+}
+@media (hover: hover) and (pointer: fine){
+  .cat-item:hover,.quote-card:hover{border-color:#3a5a41}
+  .cat-item:hover{background:rgba(76,175,80,.08)}
+  .quote-card:hover{transform:translateY(-2px)}
+  .cat-pill:hover{border-color:var(--maya-accent-2)}
+  .side-link:focus-visible,.maya-btn:focus-visible,.maya-btn-ghost:focus-visible{outline:2px solid var(--maya-accent);outline-offset:2px}
+}
+@media(min-width:720px){
+  .cat-row .acts{flex-direction:row}
+}
+body.kb-open .m-modal{top:8px;transform:translate(-50%,0);max-height:calc(100dvh - var(--kb,0px) - 16px);bottom:auto}
+body.kb-open .drawer{padding-bottom:calc(1rem + var(--kb,0px))}

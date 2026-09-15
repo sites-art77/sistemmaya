@@ -55,7 +55,7 @@
       const file=new File([blob], fileName, {type:'text/calendar'});
       if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
         await navigator.share({files:[file], title:'Visita MAYA Garden'});
-        if(typeof window.toast==='function') window.toast('No Calendário, toque em Adicionar. O iPhone avisa 3 dias antes.');
+        if(typeof window.toast==='function') window.toast('Salve no Calendário (Google, Apple ou Outlook). O aviso de 3 dias funciona com o app fechado.');
         return true;
       }
     }catch(e){ if(e && e.name==='AbortError') return false; }
@@ -64,7 +64,7 @@
     a.href=url; a.download=fileName;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 2500);
-    if(typeof window.toast==='function') window.toast('Abra no Calendário. O iPhone avisa 3 dias antes, mesmo com o app fechado.');
+    if(typeof window.toast==='function') window.toast('Arquivo de calendário baixado. Abra no Google, Apple ou Outlook. O aviso de 3 dias funciona com o app fechado.');
     return true;
   }
 
@@ -129,7 +129,7 @@
   window.remindersEnable = async ()=>{
     const ok = await ensurePermission();
     if(typeof window.toast === 'function'){
-      window.toast(ok ? 'Avisos de visita ligados.' : 'O iPhone bloqueou. Use Avisos no calendário na Agenda.');
+      window.toast(ok ? 'Avisos de visita ligados.' : 'Permissão bloqueada. Use Agenda → Avisos no calendário (Google, Apple ou Outlook).');
     }
     if(ok) checkReminders();
     if(typeof window.render === 'function') window.render();

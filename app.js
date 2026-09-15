@@ -281,16 +281,29 @@ function watchKeyboard(){
   const apply=()=>{
     try{
       const vv=window.visualViewport;
-      const covered = vv ? (window.innerHeight - vv.height) > 90 : false;
-      document.body.classList.toggle('kb-open', covered);
+      const kb = vv ? Math.max(0, window.innerHeight - vv.height - (vv.offsetTop||0)) : 0;
+      document.documentElement.style.setProperty('--kb', kb+'px');
+      document.body.classList.toggle('kb-open', kb > 80);
     }catch(e){}
   };
+  apply();
   try{
     window.visualViewport?.addEventListener('resize', apply);
     window.visualViewport?.addEventListener('scroll', apply);
   }catch(e){}
+  window.addEventListener('resize', apply);
   window.addEventListener('focusin', apply);
   window.addEventListener('focusout', ()=>setTimeout(apply, 120));
+}
+if(!window._mayaSaveKey){
+  window._mayaSaveKey=1;
+  document.addEventListener('keydown', e=>{
+    if(!(e.ctrlKey||e.metaKey) || String(e.key).toLowerCase()!=='s') return;
+    const r=location.hash||'';
+    if(!r.startsWith('#/novo') && !r.startsWith('#/editar')) return;
+    e.preventDefault();
+    if(typeof window.saveDraft==='function') window.saveDraft(r.startsWith('#/editar'));
+  });
 }
 
 function m2Services(){
@@ -1051,9 +1064,9 @@ function viewConfig(){
   return `<h1 class="text-2xl font-black mb-3 anim-in">Configurações</h1>
   <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Sessão atual</b><div class="text-xs" style="color:var(--muted)">Conectado ao Supabase. Orçamentos, clientes e catálogo sobem sozinhos para a nuvem.</div></div></div><div class="mt-3">${window.CloudSync?.accountHtml?window.CloudSync.accountHtml():'Carregando sessão…'}</div>
     <button type="button" class="maya-btn w-full mt-3" onclick="installApp()">Instalar no celular ou computador</button>
-    <p class="text-xs mt-2" style="color:var(--muted)">iPhone: Safari → Compartilhar → Adicionar à Tela de Início. Android e PC (Chrome/Edge): toque em Instalar.</p>
+    <p class="text-xs mt-2" style="color:var(--muted)">iPhone: Compartilhar → Adicionar à Tela de Início. Android: Chrome → ⋮ → Instalar app. Computador: Chrome/Edge → Instalar na barra de endereço.</p>
     <button type="button" class="maya-btn-ghost w-full mt-2" onclick="remindersEnable()">Ativar aviso de visita</button>
-    <p class="text-xs mt-2" style="color:var(--muted)">3 dias antes da visita o celular avisa. No iPhone o mais certo é <b>Agenda → Avisos no calendário</b>: o Calendário do iPhone notifica com o app fechado.</p>
+    <p class="text-xs mt-2" style="color:var(--muted)">3 dias antes da visita o sistema avisa. Com o app fechado, use <b>Agenda → Avisos no calendário</b> (Apple, Google ou Outlook, no celular e no computador).</p>
   </div>
   <div class="maya-card p-4 mb-3 anim-in" style="opacity:1">
     <h2 class="font-extrabold mb-1">Preços por metro quadrado</h2>

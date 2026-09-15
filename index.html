@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>MAYA Garden Pro — Orçamentos</title>
 <meta name="description" content="Gerador e gerenciador de orçamentos MAYA Garden — Jardinagem, Orquídeas, Paisagismo em Petrópolis-RJ"/>
-<meta name="maya-build" content="33"/>
+<meta name="maya-build" content="34"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -18,7 +18,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png"/>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="styles.css?v=22"/>
+<link rel="stylesheet" href="styles.css?v=23"/>
 <script src="gsap.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js';document.head.appendChild(s)"></script>
 <script src="jspdf.umd.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';document.head.appendChild(s)"></script>
 <script>
@@ -53,9 +53,9 @@ window.addEventListener('DOMContentLoaded',function(){
 <script src="cloud.js?v=8"></script>
 <script src="pricing.js?v=7"></script>
 <script src="pdf.js?v=14"></script>
-<script src="app.js?v=33"></script>
+<script src="app.js?v=34"></script>
 <script src="pro.js?v=19"></script>
-<script src="reminders.js?v=4"></script>
+<script src="reminders.js?v=5"></script>
 <script src="mobile-pdf.js?v=4"></script>
 <script>
 window._pwaPrompt=null;
@@ -63,7 +63,7 @@ window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();win
 window.addEventListener('appinstalled',function(){window._pwaPrompt=null;});
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('./sw.js?v=11').then(function(reg){try{reg.update();}catch(e){}}).catch(function(){});
+    navigator.serviceWorker.register('./sw.js?v=12').then(function(reg){try{reg.update();}catch(e){}}).catch(function(){});
     navigator.serviceWorker.addEventListener('controllerchange', function(){
       try{ if(sessionStorage.getItem('maya_sw_reload')==='1') return; sessionStorage.setItem('maya_sw_reload','1'); }catch(e){}
       location.reload();
