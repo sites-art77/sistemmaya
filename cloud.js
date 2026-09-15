@@ -121,6 +121,10 @@
     }
     await loadWorkspace(version);
     if(version !== sessionVersion) return;
+    if(typeof window.stripMayaDemo==='function' && canWrite()){
+      const cleaned=window.stripMayaDemo();
+      if(cleaned) await pushLocal(false, true);
+    }
     if(isAdmin()) await refreshManagedUsers();
     emit();
   }

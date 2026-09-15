@@ -87,9 +87,9 @@ function dashProHTML(){
   ${heroHtml}
   ${dueHtml}
   ${!budgets.length?`<div class="maya-card p-5 mb-3 anim-in" style="border-color:#4CAF50">
-    <div class="font-black text-lg">Bem-vindo à MAYA Garden Pro!</div>
-    <p class="text-sm mb-2" style="color:var(--muted)">Crie seu primeiro orçamento ou carregue dados de exemplo para explorar.</p>
-    <div class="flex gap-2 flex-wrap"><a href="#/novo" class="maya-btn text-sm">+ Novo orçamento</a><button class="maya-btn-ghost text-sm" onclick="seedSample()">Carregar exemplo</button></div></div>`:''}
+    <div class="font-black text-lg">Bem-vindo à MAYA Garden</div>
+    <p class="text-sm mb-2" style="color:var(--muted)">Aqui entram só os orçamentos, clientes e visitas que a equipe criar.</p>
+    <a href="#/novo" class="maya-btn text-sm">+ Novo orçamento</a></div>`:''}
   <div class="dashboard-kpis grid grid-cols-2 md:grid-cols-4 gap-2">
     ${kpi('Faturado no mês','k-fat',fatM,1)}${kpi('Recebido no mês','k-rec',recMes,1)}
     ${kpi('A receber','k-arec',aReceber,1)}${kpi('Ticket médio','k-tick',ticket,1)}
@@ -330,33 +330,31 @@ window.addVisitOn=date=>{ openModal('Agendar visita — '+fmtD(date), MF.text('a
     const a=Store.visits; a.push({id:Store.uid(),client,date,time:mv('av-time'),service:mv('av-service'),price:numBR(mv('av-price'))||0,status:'agendada'}); Store.visits=a; render(); toast('Agendado!'); if(window.MayaReminders) window.MayaReminders.afterVisitSaved(); return true;
   }); };
 
-/* ---------- DADOS DE EXEMPLO ---------- */
-window.seedSample=async ()=>{
-  if((Store.budgets||[]).length && !await confirmModal('Carregar exemplo','Já existem orçamentos. Adicionar os dados de exemplo mesmo assim?','Adicionar')) return;
-  const t=todayISO();
-  const cs=[{id:Store.uid(),name:'Maria Silva',phone:'24999990001',address:'Itaipava, Petrópolis-RJ'},{id:Store.uid(),name:'João Pereira',phone:'24999990002',address:'Corrêas, Petrópolis-RJ'},{id:Store.uid(),name:'Condomínio Alto da Serra',phone:'24999990003',address:'Quitandinha, Petrópolis-RJ'}];
-  Store.clients=[...Store.clients, ...cs];
-  const mkB=(cli,items,days,status,validOff)=>{ const b=blankBudget(); b.client={name:cli.name,phone:cli.phone,address:cli.address}; b.items=items; b.date=addDays(t,days); b.validity=addDays(t,validOff); b.status=status; b.payment='Pix'; b.notes='Orçamento de exemplo — edite ou exclua.'; recalcDraft2(b); return b; };
-  Store.budgets=[...Store.budgets,
-    mkB(cs[0],[{desc:'Replantio orquídea — substrato premium',qty:6,unitLabel:'vaso',unit:55},{desc:'Adubação foliar',qty:1,unitLabel:'aplicação',unit:90}],-20,'aprovado',-5),
-    mkB(cs[2],[{desc:'Manutenção mensal do jardim (120m²)',qty:1,unitLabel:'mensalidade',unit:720},{desc:'Controle preventivo pragas',qty:1,unitLabel:'aplicação',unit:160}],-8,'aprovado',7),
-    mkB(cs[1],[{desc:'Poda de arbustos ornamentais',qty:8,unitLabel:'un',unit:60},{desc:'Limpeza + remoção',qty:1,unitLabel:'serviço',unit:220}],-2,'pendente',13),
-    mkB(cs[0],[{desc:'Orquidário simples 2m²',qty:1,unitLabel:'projeto',unit:900}],-40,'pendente',-25)];
-  Store.visits=[...Store.visits,
-    {id:Store.uid(),client:cs[1].name,date:addDays(t,2),time:'09:00',service:'Avaliação p/ poda',price:0,status:'agendada'},
-    {id:Store.uid(),client:cs[2].name,date:addDays(t,5),time:'14:00',service:'Manutenção mensal',price:720,status:'agendada'}];
-  Store.contracts=[...Store.contracts,
-    {id:Store.uid(),client:{name:cs[2].name,phone:cs[2].phone,address:cs[2].address},title:'Manutenção mensal do jardim',value:720,freq:'mensal',startDate:addDays(t,-60),lastBilled:addDays(t,-30),active:true,notes:'Todo dia 5.'},
-    {id:Store.uid(),client:{name:cs[0].name,phone:cs[0].phone,address:cs[0].address},title:'Cuidado orquidário (visita mensal)',value:180,freq:'mensal',startDate:addDays(t,-30),lastBilled:'',active:true,notes:''}];
-  // demo: um recebimento parcial + um pendente antigo (follow-up)
-  const _all = Store.budgets;
-  const firstApr=_all.find(b=>b.status==='aprovado');
-  if(firstApr){ firstApr.paid={entries:[{id:Store.uid(),date:addDays(t,-3),value:Math.round(Number(firstApr.total)*0.5*100)/100,method:'Pix'}]}; }
-  const joao=_all.find(b=>b.client?.name==='João Pereira'&&b.status==='pendente');
-  if(joao){ joao.createdAt=new Date(Date.now()-9*864e5).toISOString(); }
-  Store.budgets=_all;
-  render(); toast('Exemplo carregado!');
+/* ---------- limpa dados de demonstração ---------- */
+window.stripMayaDemo=()=>{
+  const demoPhones=new Set(['24999990001','24999990002','24999990003']);
+  const demoNames=new Set(['Maria Silva','João Pereira','Condomínio Alto da Serra']);
+  const demoVisit=new Set(['Avaliação p/ poda','Manutenção mensal']);
+  const phone=v=>String(v||'').replace(/\D/g,'');
+  const isDemoB=b=>demoPhones.has(phone(b.client?.phone)) || /orçamento de exemplo/i.test(String(b.notes||''));
+  const isDemoC=c=>demoPhones.has(phone(c.phone));
+  const isDemoV=v=>demoNames.has(v.client) && demoVisit.has(v.service);
+  const isDemoK=c=>demoNames.has(c.client?.name) && /manutenção mensal do jardim|cuidado orquidário/i.test(String(c.title||''));
+  const b=Store.budgets||[], c=Store.clients||[], v=Store.visits||[], k=Store.contracts||[];
+  const nb=b.filter(x=>!isDemoB(x)), nc=c.filter(x=>!isDemoC(x)), nv=v.filter(x=>!isDemoV(x)), nk=k.filter(x=>!isDemoK(x));
+  if(nb.length===b.length && nc.length===c.length && nv.length===v.length && nk.length===k.length) return false;
+  window.__mayaAuthSyncing=true;
+  try{
+    if(nb.length!==b.length) Store.budgets=nb;
+    if(nc.length!==c.length) Store.clients=nc;
+    if(nv.length!==v.length) Store.visits=nv;
+    if(nk.length!==k.length) Store.contracts=nk;
+  }finally{ window.__mayaAuthSyncing=false; }
+  return true;
 };
+
+/* ---------- DADOS DE EXEMPLO (desativado — não mistura com dados reais) ---------- */
+window.seedSample=()=>{ toast('Dados de exemplo foram desativados.'); };
 
 /* ---------- PACOTES PRONTOS ---------- */
 function parsePackLines(text){

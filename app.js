@@ -209,6 +209,9 @@ function enforceRoleUi(){
 }
 function render(){
   if(!window.MayaAuth?.authenticated){ renderAuthGate(); return; }
+  if(window.stripMayaDemo && window.MayaAuth.canWrite() && window.stripMayaDemo()){
+    window.CloudSync?.flushPush?.();
+  }
   const r = currentRoute();
   let html='';
   if(r==='#/'||r==='' ) html = dashProHTML();
