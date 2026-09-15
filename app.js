@@ -278,11 +278,8 @@ function afterRender(r){
 function m2Services(){
   const p = Store.pricing||{};
   return [
-    {k:'grama', t:'Corte de grama', rate:Number(p.m2Grama||8)},
-    {k:'manut', t:'Manutenção / limpeza', rate:Number(p.m2ManutIdeal||6.5)},
-    {k:'impl', t:'Implantação de jardim', rate:Number(p.m2ImplIdeal||180)},
-    {k:'irrig', t:'Irrigação', rate:Number(p.m2Irrigacao||30)},
-    {k:'proj', t:'Projeto paisagístico', rate:Number(p.projetoM2Ideal||40)}
+    {k:'proj', t:'Projeto paisagístico', rate:Number(p.projetoM2Ideal||40)},
+    {k:'impl', t:'Implantação de jardim', rate:Number(p.m2ImplIdeal||180)}
   ];
 }
 window.applyM2 = function(){
@@ -355,7 +352,8 @@ function viewEditor(isEdit){
         <textarea id="f-servicetext" class="maya-textarea free-scope" rows="10" placeholder="Ex: Limpeza completa do jardim, poda das cercas-vivas, capina dos canteiros, adubação e varrição. Material incluso. Execução em 1 dia.">${esc(d.serviceText||'')}</textarea>
         <label class="text-xs font-bold block mt-2">Valor do serviço R$<input type="text" inputmode="decimal" enterkeyhint="done" id="f-servicevalue" class="maya-input" value="${esc(d.serviceValue||0)}" placeholder="0"></label>
         <div class="m2-box mt-3">
-          <div class="text-xs font-extrabold mb-1">Calcular por m²</div>
+          <div class="text-xs font-extrabold mb-1">Paisagismo por m²</div>
+          <p class="text-xs mb-2" style="color:var(--muted)">Só projeto e implantação. Grama e manutenção ficam no valor do serviço.</p>
           <select id="f-m2tipo" class="maya-select mb-2" onchange="hintM2()">${m2Services().map(s=>`<option value="${s.k}">${esc(s.t)} — ${brl(s.rate)}/m²</option>`).join('')}</select>
           <div class="grid grid-cols-2 gap-2">
             <input type="text" inputmode="decimal" enterkeyhint="done" id="f-m2area" class="maya-input" placeholder="Área em m²">
