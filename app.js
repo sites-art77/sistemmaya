@@ -971,7 +971,7 @@ function viewCatalog(){
   });
   const grouped={}; items.forEach(c=>{ (grouped[c.cat]=grouped[c.cat]||[]).push(c); });
   const packs=Store.packages||[];
-  const pill=(id,label,n)=>`<button type="button" class="cat-pill${catF===id?' on':''}" onclick="setCatFilter(${JSON.stringify(id)})">${esc(label)}${n!=null?` <span>${n}</span>`:''}</button>`;
+  const pill=(id,label,n)=>`<button type="button" class="cat-pill${catF===id?' on':''}" onclick='setCatFilter(${JSON.stringify(id)})'>${esc(label)}${n!=null?` <span>${n}</span>`:''}</button>`;
   return `<div class="cat-head anim-in">
     <h1 class="text-2xl font-black">Catálogo</h1>
     <button class="maya-btn text-sm" onclick="addCat()">+ Item</button>

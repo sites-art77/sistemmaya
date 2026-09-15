@@ -167,7 +167,7 @@ function clientsProHTML(q){
         ${last?`<div class="quote-meta">Último: Nº ${esc(last.number)} • ${fmtD(last.date)}</div>`:''}
       </button>
       <div class="quote-card-actions">
-        <button type="button" class="maya-btn" onclick="openZapText(${JSON.stringify(c.phone||'')}, ${JSON.stringify('Olá '+c.name+'! Aqui é MAYA Garden.')})">WhatsApp</button>
+        <button type="button" class="maya-btn" onclick='openZapText(${JSON.stringify(c.phone||'')}, ${JSON.stringify('Olá '+c.name+'! Aqui é MAYA Garden.')})'>WhatsApp</button>
         <button type="button" class="maya-btn-ghost" onclick="newForClient('${c.id}')">Orçamento</button>
         <button type="button" class="maya-btn-ghost" onclick="editClient('${c.id}')">Editar</button>
       </div>
@@ -194,7 +194,7 @@ window.clientDetail=id=>{
   openDrawer(`<h3 class="font-black text-lg">${esc(c.name)}</h3>
   <div class="text-sm mb-2" style="color:var(--muted)">${esc(c.phone||'sem WhatsApp')}<br>${esc(c.address||'sem endereço')}</div>
   <div class="quote-card-actions mb-3">
-    ${hi?`<button class="maya-btn" onclick="openZapText(${JSON.stringify(c.phone||'')}, ${JSON.stringify('Olá '+c.name+'! Aqui é MAYA Garden.')})">WhatsApp</button>`:''}
+    ${hi?`<button class="maya-btn" onclick='openZapText(${JSON.stringify(c.phone||'')}, ${JSON.stringify('Olá '+c.name+'! Aqui é MAYA Garden.')})'>WhatsApp</button>`:''}
     ${hi?`<a class="maya-btn-ghost" href="tel:+${hi}" style="text-align:center;display:flex;align-items:center;justify-content:center">Ligar</a>`:''}
     <button class="maya-btn-ghost" onclick="closeDrawer();newForClient('${c.id}')">Orçamento</button>
   </div>
