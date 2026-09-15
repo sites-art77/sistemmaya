@@ -24,8 +24,21 @@
 <script>
 window.__mayaErr=[];
 function __mayaShowErr(m){window.__mayaErr.push(m);var d=document.getElementById('errbox');if(d){d.style.display='block';d.textContent='Erro: '+window.__mayaErr.join(' | ').slice(0,400);}}
-window.onerror=function(m,s,l,c){__mayaShowErr(m+' @'+String(s||'').split('/').pop()+':'+l);};
-window.addEventListener('unhandledrejection',function(e){__mayaShowErr('Falha: '+String((e&&e.reason&&e.reason.message)||e.reason||e).slice(0,120));});
+function __mayaNoise(m){
+  m=String(m||'');
+  return !m || m==='Script error.' || m==='Script error' || /script error/i.test(m) || /ResizeObserver loop/i.test(m) || /The operation was aborted/i.test(m) || /AbortError/i.test(m) || /NotAllowedError/i.test(m) || /cancelled|canceled/i.test(m);
+}
+window.onerror=function(m,s,l){
+  if(__mayaNoise(m)) return true;
+  if(!s && (!l || l===0)) return true;
+  __mayaShowErr(m+' @'+String(s||'').split('/').pop()+':'+l);
+  return false;
+};
+window.addEventListener('unhandledrejection',function(e){
+  var r=e&&e.reason, name=r&&r.name, msg=String((r&&r.message)||r||'');
+  if(name==='AbortError'||name==='NotAllowedError'||__mayaNoise(msg)) return;
+  __mayaShowErr('Falha: '+msg.slice(0,120));
+});
 window.addEventListener('DOMContentLoaded',function(){
   try{var t=document.createElement('div');t.className='hidden';t.style.position='absolute';document.body.appendChild(t);
   var ok=getComputedStyle(t).display==='none';t.remove();

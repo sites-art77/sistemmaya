@@ -1,5 +1,5 @@
 /* MAYA Garden Pro — PWA: rede primeiro no código, cache só como fallback */
-const V = 'maya-v8';
+const V = 'maya-v9';
 const CORE = [
   './', './index.html', './manifest.json',
   './icon-192.png', './icon-512.png',
