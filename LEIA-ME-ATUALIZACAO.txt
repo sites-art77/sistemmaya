@@ -1,0 +1,26 @@
+ATUALIZAÇÃO — PDF MOBILE MAYA GARDEN
+
+Arquivos:
+1. mobile-pdf.js  -> NOVO arquivo
+2. index.html     -> SUBSTITUI o index.html atual
+
+Como instalar pelo GitHub no celular:
+1. Entre no repositório sites-art77/sistemmaya.
+2. Toque nos três pontinhos ao lado do botão Code.
+3. Escolha "Upload file".
+4. Envie mobile-pdf.js e index.html para a RAIZ do repositório.
+5. Confirme o commit na branch main.
+
+O index.html deste pacote já inclui:
+<script src="mobile-pdf.js?v=1"></script>
+
+O que muda:
+- PDF passa a mostrar uma tela "PDF pronto".
+- Botão grande "Baixar PDF".
+- Botão "Abrir PDF".
+- Botão "Compartilhar" quando o navegador suporta arquivos.
+- No iPhone, Compartilhar permite usar WhatsApp e "Salvar em Arquivos".
+- Botões "PDF" na lista passam a aparecer como "⬇ Baixar PDF".
+- A geração visual do orçamento e o conteúdo do PDF original continuam intactos.
+
+Se o GitHub avisar que index.html já existe, confirme a substituição/commit.
