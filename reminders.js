@@ -47,12 +47,21 @@
   function icsFile(visits){
     return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//MAYA Garden//Agenda//PT','CALSCALE:GREGORIAN','METHOD:PUBLISH'].concat(visits.map(visitEvent)).concat(['END:VCALENDAR']).join('\r\n');
   }
-  function downloadIcs(visits, name){
+  async function downloadIcs(visits, name){
     if(!visits.length){ if(typeof window.toast==='function') window.toast('Nenhuma visita para o calendário.'); return false; }
     const blob=new Blob([icsFile(visits)],{type:'text/calendar;charset=utf-8'});
+    const fileName=name||'visitas-maya-garden.ics';
+    try{
+      const file=new File([blob], fileName, {type:'text/calendar'});
+      if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:'Visita MAYA Garden'});
+        if(typeof window.toast==='function') window.toast('No Calendário, toque em Adicionar. O iPhone avisa 3 dias antes.');
+        return true;
+      }
+    }catch(e){ if(e && e.name==='AbortError') return false; }
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
-    a.href=url; a.download=name||'visitas-maya-garden.ics';
+    a.href=url; a.download=fileName;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 2500);
     if(typeof window.toast==='function') window.toast('Abra no Calendário. O iPhone avisa 3 dias antes, mesmo com o app fechado.');

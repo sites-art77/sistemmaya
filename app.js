@@ -269,10 +269,28 @@ function viewDashboardLegacy(){
   </div>`;
 }
 function afterRender(r){
+  watchKeyboard();
   if(r==='#/'||r===''){ sweepExpired(); if(window.dashAfter) dashAfter(); }
   if(r.startsWith('#/novo')||r.startsWith('#/editar')){ recalcDraft(); window.__lastTot = Draft.total; paintEditorTotals(); paintPreview(); applyWmVars(); paintPaid(); toggleParcels(); applyQuoteMode(); }
   if(r.startsWith('#/orcamentos') && window.renderList){ try{ renderList(); }catch(e){ console.warn(e); } }
   if(r.startsWith('#/relatorios') && window.repAfter){ try{ repAfter(); }catch(e){} }
+}
+function watchKeyboard(){
+  if(window._kbWatch) return;
+  window._kbWatch=1;
+  const apply=()=>{
+    try{
+      const vv=window.visualViewport;
+      const covered = vv ? (window.innerHeight - vv.height) > 90 : false;
+      document.body.classList.toggle('kb-open', covered);
+    }catch(e){}
+  };
+  try{
+    window.visualViewport?.addEventListener('resize', apply);
+    window.visualViewport?.addEventListener('scroll', apply);
+  }catch(e){}
+  window.addEventListener('focusin', apply);
+  window.addEventListener('focusout', ()=>setTimeout(apply, 120));
 }
 
 function m2Services(){
@@ -356,7 +374,7 @@ function viewEditor(isEdit){
           <p class="text-xs mb-2" style="color:var(--muted)">Só projeto e implantação. Grama e manutenção ficam no valor do serviço.</p>
           <select id="f-m2tipo" class="maya-select mb-2" onchange="hintM2()">${m2Services().map(s=>`<option value="${s.k}">${esc(s.t)} — ${brl(s.rate)}/m²</option>`).join('')}</select>
           <div class="grid grid-cols-2 gap-2">
-            <input type="text" inputmode="decimal" enterkeyhint="done" id="f-m2area" class="maya-input" placeholder="Área em m²">
+            <input type="text" inputmode="decimal" enterkeyhint="done" id="f-m2area" class="maya-input" placeholder="Área em m²" onkeydown="if(event.key==='Enter'){event.preventDefault();applyM2()}">
             <button type="button" class="maya-btn" onclick="applyM2()">Aplicar</button>
           </div>
           <div class="text-xs mt-1" id="m2-hint" style="color:var(--muted)">${esc(m2Services()[0].t)}: ${brl(m2Services()[0].rate)} por m²</div>
@@ -746,12 +764,12 @@ const CALC_OPTS = [
   {v:'orquidario', t:'Orquidário', s:'projeto completo', tipo:'orquidario', unit:'', def:0},
   {v:'projeto', t:'Projeto', s:'paisagismo por m²', tipo:'projeto_m2', unit:'m²', def:50}
 ];
-window.CalcTipo = 'manutencao';
+window.CalcTipo = 'implantar';
 window.CalcNivel = 'essencial';
 window.openCalc = (itemIndex)=>{
   CalcSel = (itemIndex===null||itemIndex===undefined)? null : Number(itemIndex);
   const st = Store.settings;
-  if(!CALC_OPTS.some(o=>o.v===window.CalcTipo)) window.CalcTipo='manutencao';
+  if(!CALC_OPTS.some(o=>o.v===window.CalcTipo)) window.CalcTipo='implantar';
   if(!['essencial','padrao','premium'].includes(window.CalcNivel)) window.CalcNivel='essencial';
   openDrawer(`
   <h3 class="font-black text-lg">Quanto cobrar?</h3>
@@ -1121,11 +1139,8 @@ function viewConfig(){
     </div>
     <button ${disabled} class="maya-btn mt-3 w-full" onclick="savePricing()">Salvar esses preços</button>
     ${write?`<details class="more-opts mt-3"><summary>Zona de perigo</summary>
-      <p class="text-xs mt-2" style="color:var(--muted)">Só use se souber o que está fazendo.</p>
-      <div class="flex gap-2 mt-2 flex-wrap">
-        <button class="maya-btn-ghost text-sm" onclick="seedSample()">Colocar dados de exemplo</button>
-        <button class="maya-btn-ghost text-sm !text-red-700 !border-red-300" onclick="confirmReset()">Apagar tudo</button>
-      </div>
+      <p class="text-xs mt-2" style="color:var(--muted)">Apaga orçamentos, clientes e visitas desta conta na nuvem.</p>
+      <button class="maya-btn-ghost text-sm !text-red-700 !border-red-300 mt-2" onclick="confirmReset()">Apagar tudo</button>
     </details>`:'<div class="mt-4 text-xs" style="color:var(--muted)">Perfil visitante: somente visualização.</div>'}
   </div></div>`;
 }
