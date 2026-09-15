@@ -134,8 +134,20 @@
     if (!navigator.share) return false;
     const file = await pdfFile();
     if (!file) return false;
-    if (navigator.canShare && !navigator.canShare({ files: [file] })) return false;
-    /* iOS/WhatsApp falha se mandar text/title junto com o arquivo */
+    try {
+      if (navigator.canShare && !navigator.canShare({ files: [file] })) {
+        if (!isAndroid()) return false;
+      }
+    } catch (_) {}
+    if (isAndroid()) {
+      const msg = quoteMessage();
+      try {
+        await navigator.share({ files: [file], title: asciiFileName(state.filename), text: msg });
+        return true;
+      } catch (err) {
+        if (err && err.name === 'AbortError') throw err;
+      }
+    }
     await navigator.share({ files: [file] });
     return true;
   }
@@ -166,7 +178,10 @@
 
     try {
       if (await shareFilesOnly()) {
-        toast('Envie só o PDF. A mensagem já foi copiada.');
+        toast(isAndroid()
+          ? 'Escolha o WhatsApp na lista. O PDF vai na conversa.'
+          : 'Envie só o PDF. A mensagem já foi copiada.');
+        closePdfReady();
         return;
       }
     } catch (err) {
@@ -174,26 +189,26 @@
       console.warn('Share WhatsApp falhou:', err);
     }
 
+    triggerDownload();
     const phone = state.budget && state.budget.client && state.budget.client.phone;
     if (typeof window.openZapText === 'function' && phone) {
       window.openZapText(phone, msg);
-      toast('WhatsApp aberto. Toque no clipe e anexe o PDF.');
-      triggerDownload();
+      toast('WhatsApp aberto. Toque no clipe → Documento e escolha o PDF que acabou de baixar.');
       return;
     }
 
-    triggerDownload();
-    toast('Baixe o PDF, abra o WhatsApp e anexe pelo clipe.');
+    toast('PDF baixado. Abra o WhatsApp, toque no clipe → Documento e envie o arquivo.');
   }
 
   function canShareFiles() {
     try {
       if (!navigator.share) return false;
+      if (isAndroid()) return true;
       if (!navigator.canShare) return true;
       const test = new File(['x'], 'teste.pdf', { type: 'application/pdf' });
       return navigator.canShare({ files: [test] });
     } catch (_) {
-      return false;
+      return !!navigator.share;
     }
   }
 
@@ -223,14 +238,16 @@
         <div class="pdf-ready-handle" aria-hidden="true"></div>
         <div class="pdf-ready-icon" aria-hidden="true">OK</div>
         <h2 id="pdf-ready-title">PDF pronto</h2>
-        <p class="pdf-ready-sub">Toque em Enviar no WhatsApp ou Baixar PDF.</p>
+        <p class="pdf-ready-sub">${isAndroid()
+          ? 'Mande o PDF no WhatsApp sem sair do sistema.'
+          : 'Toque em Enviar no WhatsApp ou Baixar PDF.'}</p>
         <div class="pdf-ready-file" title="${escapeHtml(safeName)}">
           <span aria-hidden="true">PDF</span>
           <strong>${escapeHtml(safeName)}</strong>
         </div>
 
         <button type="button" class="pdf-ready-primary" id="pdf-ready-whatsapp">
-          <span>Enviar no WhatsApp</span>
+          <span>${isAndroid() ? 'Mandar no WhatsApp' : 'Enviar no WhatsApp'}</span>
         </button>
 
         <a class="pdf-ready-secondary pdf-ready-full" id="pdf-ready-download" href="${url}" download="${escapeHtml(safeName)}" target="_blank" rel="noopener">
@@ -246,7 +263,7 @@
           ${ios
             ? 'No iPhone: envie só o arquivo, sem legenda. Se o WhatsApp recusar, baixe o PDF e anexe pelo clipe.'
             : isAndroid()
-              ? 'No Android: Enviar no WhatsApp abre a lista de apps. Ou baixe e anexe pelo clipe. O arquivo fica em Downloads.'
+              ? 'No Android: Mandar no WhatsApp abre a lista de apps. Toque em WhatsApp e escolha a conversa. O PDF vai anexo.'
               : 'O arquivo entra em Downloads. Depois você pode enviar no WhatsApp.'}
         </p>
         <button type="button" class="pdf-ready-close" id="pdf-ready-close">Fechar</button>
@@ -368,7 +385,9 @@
       if (btn.dataset.pdfDownloadEnhanced === '1') return;
       btn.dataset.pdfDownloadEnhanced = '1';
       const text = (btn.textContent || '').trim();
-      if (text === 'PDF' || text === 'Baixar PDF') btn.textContent = 'Baixar PDF';
+      if (text === 'PDF' || text === 'Baixar PDF') {
+        btn.textContent = (isAndroid() || isIOS()) ? 'PDF' : 'Baixar PDF';
+      }
     });
   }
 
