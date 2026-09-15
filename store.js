@@ -21,7 +21,7 @@ const defaultSettings = {
   tagline: 'Jardinagem • Especialista em Orquídeas • Paisagismo',
   whatsappDisplay: '(24) 99262-8213',
   whatsappLink: '5524992628213',
-  instagram: '@mayagarden',
+  instagram: '@maya.gardenn',
   address: 'Petrópolis - RJ',
   pix: '',
   cnpj: '',
@@ -100,7 +100,16 @@ function canPersist(){
 function save(key, val){ if(!canPersist()) return false; localStorage.setItem(key, JSON.stringify(val)); notifyStoreChanged(); return true; }
 
 const Store = {
-  get settings(){ const s = load(K.settings, defaultSettings); if(s && /^assets\//.test(String(s.logoPath||''))) s.logoPath=String(s.logoPath).replace(/^assets\//,''); if(s && s.zapTemplate) s.zapTemplate = String(s.zapTemplate).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu,'').replace(/ {2,}/g,' '); return s; },
+  get settings(){
+    const s = load(K.settings, defaultSettings);
+    if(s && /^assets\//.test(String(s.logoPath||''))) s.logoPath=String(s.logoPath).replace(/^assets\//,'');
+    if(s && s.zapTemplate) s.zapTemplate = String(s.zapTemplate).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu,'').replace(/ {2,}/g,' ');
+    if(!s.instagram || /^@?mayagarden$/i.test(String(s.instagram).trim())){
+      s.instagram='@maya.gardenn';
+      if(canPersist()) save(K.settings, s);
+    }
+    return s;
+  },
   set settings(v){ save(K.settings, v); },
   get catalog(){ const c = load(K.catalog, defaultCatalog); return Array.isArray(c)&&c.length?c:structuredClone(defaultCatalog); },
   set catalog(v){ save(K.catalog, v); },
