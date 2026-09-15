@@ -1,5 +1,5 @@
 /* MAYA Garden Pro — PWA: rede primeiro no código, cache só como fallback */
-const V = 'maya-v9';
+const V = 'maya-v10';
 const CORE = [
   './', './index.html', './manifest.json',
   './icon-192.png', './icon-512.png',
@@ -27,7 +27,7 @@ self.addEventListener('fetch', e => {
 
   const isAppCode =
     e.request.mode === 'navigate' ||
-    /\/(index\.html|404\.html|diagnostico\.html|(styles|fallback)\.css|(store|cloud|pricing|pdf|app|pro|mobile-pdf)\.js|(gsap|jspdf\.umd)\.js|manifest\.json)(\?|$)/.test(u.pathname + u.search);
+    /\/(index\.html|404\.html|diagnostico\.html|(styles|fallback)\.css|(store|cloud|pricing|pdf|app|pro|mobile-pdf|reminders)\.js|(gsap|jspdf\.umd)\.js|manifest\.json)(\?|$)/.test(u.pathname + u.search);
 
   if (isAppCode) {
     e.respondWith(
@@ -50,5 +50,22 @@ self.addEventListener('fetch', e => {
       }
       return r;
     }).catch(() => caches.match('./index.html')))
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const dest = new URL('./', self.registration.scope);
+  dest.hash = '#/agenda';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if ('focus' in c) {
+          if (c.navigate) c.navigate(dest.href);
+          return c.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(dest.href);
+    })
   );
 });

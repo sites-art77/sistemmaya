@@ -81,8 +81,11 @@ function dashProHTML(){
   const firstName=(Store.settings.company||'MAYA Garden').split(' ')[0];
   const heroSum=pl(pend.length,'orçamento ativo','orçamentos ativos')+' • '+pl(todayVs.length,'visita hoje','visitas hoje',true);
   const heroHtml=`<div class="hero mb-3 anim-in"><span class="orb"></span><span class="orb"></span><span class="orb"></span><h1>${greet}!</h1><p>${heroDate()} — ${heroSum}.</p></div>`;
+  const dueDash=(window.MayaReminders?.dueVisits?.()||[]);
+  const dueHtml=dueDash.length?`<div class="maya-card p-3 mb-3 anim-in" style="border-color:#4CAF50"><b>Visita em 3 dias</b>${dueDash.map(v=>`<div class="text-sm mt-1">${esc(v.client||'Cliente')} • ${fmtD(v.date)} ${esc(v.time||'')}</div>`).join('')}<a class="text-sm font-bold" style="color:var(--maya-accent)" href="#/agenda">Ver agenda →</a></div>`:'';
   return `
   ${heroHtml}
+  ${dueHtml}
   ${!budgets.length?`<div class="maya-card p-5 mb-3 anim-in" style="border-color:#4CAF50">
     <div class="font-black text-lg">Bem-vindo à MAYA Garden Pro!</div>
     <p class="text-sm mb-2" style="color:var(--muted)">Crie seu primeiro orçamento ou carregue dados de exemplo para explorar.</p>
@@ -294,10 +297,16 @@ function agendaProHTML(){
     const vs=byDay[iso]||[]; const sel=window.CalDay===iso; const isToday=iso===todayISO();
     cells+=`<button onclick="calPick('${iso}')" class="cal-day${sel?' sel':''}${isToday?' today':''}">${d}${vs.length?`<span class="cal-dot">${vs.length}</span>`:''}</button>`; }
   const dayVs=(Store.visits||[]).filter(v=>v.date===window.CalDay).sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
+  const due=(window.MayaReminders?.dueVisits?.()||[]);
+  const perm=window.MayaReminders?.permission?.()||'default';
+  const remindBox = due.length
+    ? `<div class="maya-card p-3 mb-3 anim-in" style="border-color:#4CAF50"><b>Visita em 3 dias</b>${due.map(v=>`<div class="text-sm mt-1">${esc(v.client||'Cliente')} • ${fmtD(v.date)} ${esc(v.time||'')} ${v.service?'• '+esc(v.service):''}</div>`).join('')}</div>`
+    : (perm!=='granted' ? `<div class="maya-card p-3 mb-3 anim-in"><div class="flex items-center gap-2 flex-wrap"><div class="flex-1 text-sm">Avisamos <b>3 dias antes</b> da visita no celular.</div><button class="maya-btn text-sm" onclick="remindersEnable()">Ativar avisos</button></div></div>` : `<p class="text-xs mb-3" style="color:var(--muted)">Aviso automático 3 dias antes de cada visita.</p>`);
   return `<div class="flex items-center gap-2 mb-3 anim-in flex-wrap"><h1 class="text-2xl font-black">Agenda</h1><div class="flex-1"></div>
     <button class="maya-btn-ghost text-sm" onclick="calNav(-1)">←</button><b class="capitalize">${label}</b><button class="maya-btn-ghost text-sm" onclick="calNav(1)">→</button>
     <button class="maya-btn-ghost text-sm" onclick="openChecklist('')">Checklist</button>
     <button class="maya-btn text-sm" onclick="addVisitOn(window.CalDay)">+ Agendar dia ${fmtD(window.CalDay)}</button></div>
+  ${remindBox}
   <div class="grid lg:grid-cols-5 gap-3">
     <div class="maya-card p-3 anim-in lg:col-span-3"><div class="cal-grid text-xs font-bold mb-1" style="color:var(--muted)">${['SEG','TER','QUA','QUI','SEX','SÁB','DOM'].map(d=>`<div class="text-center">${d}</div>`).join('')}</div>
     <div class="cal-grid">${cells}</div></div>
@@ -311,7 +320,7 @@ window.calNav=d=>{ window.CalYM=addMonths(window.CalYM+'-01',d).slice(0,7); rend
 window.calPick=iso=>{ window.CalDay=iso; render(); };
 window.addVisitOn=date=>{ openModal('Agendar visita — '+fmtD(date), MF.text('av-client','Cliente *','')+`<div class="f-row2">`+MF.time('av-time','Hora','09:00')+MF.num('av-price','Valor previsto R$',0)+`</div>`+MF.text('av-service','Serviço','Visita avaliação'), ()=>{
     const client=mv('av-client'); if(!client) return 'Informe o cliente.';
-    const a=Store.visits; a.push({id:Store.uid(),client,date,time:mv('av-time'),service:mv('av-service'),price:numBR(mv('av-price'))||0,status:'agendada'}); Store.visits=a; render(); toast('Agendado!'); return true;
+    const a=Store.visits; a.push({id:Store.uid(),client,date,time:mv('av-time'),service:mv('av-service'),price:numBR(mv('av-price'))||0,status:'agendada'}); Store.visits=a; render(); toast('Agendado!'); if(window.MayaReminders) window.MayaReminders.afterVisitSaved(); return true;
   }); };
 
 /* ---------- DADOS DE EXEMPLO ---------- */

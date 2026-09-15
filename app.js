@@ -953,7 +953,7 @@ function viewAgendaLegacy(){
 }
 window.addVisit=()=>{ openModal('Agendar visita', MF.text('av-client','Cliente *','','Nome do cliente')+`<div class="f-row2">`+MF.date('av-date','Data',todayISO())+MF.time('av-time','Hora','09:00')+`</div>`+MF.text('av-service','Serviço','Visita avaliação')+MF.num('av-price','Valor previsto R$',0), ()=>{
     const client=mv('av-client'); if(!client) return 'Informe o cliente.';
-    const a=Store.visits; a.push({id:Store.uid(),client,date:mv('av-date')||todayISO(),time:mv('av-time'),service:mv('av-service'),price:numBR(mv('av-price')),status:'agendada'}); Store.visits=a; render(); toast('Visita agendada!'); return true;
+    const a=Store.visits; a.push({id:Store.uid(),client,date:mv('av-date')||todayISO(),time:mv('av-time'),service:mv('av-service'),price:numBR(mv('av-price')),status:'agendada'}); Store.visits=a; render(); toast('Visita agendada!'); if(window.MayaReminders) window.MayaReminders.afterVisitSaved(); return true;
   }); };
 window.toggleVisit=id=>{ const a=Store.visits; const v=a.find(x=>x.id===id); v.status=v.status==='concluída'?'agendada':'concluída'; Store.visits=a; render(); };
 window.delVisit=async id=>{ if(!await confirmModal('Excluir visita','Remover esta visita da agenda?'))return; Store.visits=Store.visits.filter(v=>v.id!==id); render(); };
@@ -971,6 +971,8 @@ function viewConfig(){
     <p class="text-xs mt-2" style="color:var(--muted)">iPhone: Safari → Compartilhar → Adicionar à Tela de Início. Android e PC (Chrome/Edge): toque em Instalar.</p>
     <button type="button" class="maya-btn-ghost w-full mt-2" onclick="refreshSystem()">Atualizar sistema</button>
     <p class="text-xs mt-2" style="color:var(--muted)">Se a tela parecer antiga, toque aqui. Limpa o cache e recarrega a versão nova.</p>
+    <button type="button" class="maya-btn-ghost w-full mt-2" onclick="remindersEnable()">Ativar aviso de visita</button>
+    <p class="text-xs mt-2" style="color:var(--muted)">3 dias antes da visita agendada o celular recebe uma notificação. No iPhone, o app precisa estar na tela inicial e as notificações permitidas.</p>
   </div>
   <div class="maya-card p-4 mb-3 anim-in" style="opacity:1">
     <h2 class="font-extrabold mb-1">Preços por metro quadrado</h2>
