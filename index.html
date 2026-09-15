@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>MAYA Garden Pro — Orçamentos</title>
 <meta name="description" content="Gerador e gerenciador de orçamentos MAYA Garden — Jardinagem, Orquídeas, Paisagismo em Petrópolis-RJ"/>
-<meta name="theme-color" content="#0C120C"/>
+<meta name="maya-build" content="32"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -53,7 +53,7 @@ window.addEventListener('DOMContentLoaded',function(){
 <script src="cloud.js?v=8"></script>
 <script src="pricing.js?v=7"></script>
 <script src="pdf.js?v=14"></script>
-<script src="app.js?v=31"></script>
+<script src="app.js?v=32"></script>
 <script src="pro.js?v=19"></script>
 <script src="reminders.js?v=3"></script>
 <script src="mobile-pdf.js?v=4"></script>
@@ -63,7 +63,11 @@ window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();win
 window.addEventListener('appinstalled',function(){window._pwaPrompt=null;});
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('./sw.js').then(function(reg){try{reg.update();}catch(e){}}).catch(function(){});
+    navigator.serviceWorker.register('./sw.js?v=11').then(function(reg){try{reg.update();}catch(e){}}).catch(function(){});
+    var reloaded=false;
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(reloaded) return; reloaded=true; location.reload();
+    });
   });
 }
 </script>
