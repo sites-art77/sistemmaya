@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>MAYA Garden Pro — Orçamentos</title>
 <meta name="description" content="Gerador e gerenciador de orçamentos MAYA Garden — Jardinagem, Orquídeas, Paisagismo em Petrópolis-RJ"/>
-<meta name="maya-build" content="38"/>
+<meta name="maya-build" content="39"/>
 <meta name="theme-color" content="#0C120C"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -15,11 +15,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="manifest" href="/manifest.json"/>
-<link rel="apple-touch-icon" sizes="180x180" href="icon-192.png"/>
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"/>
+<link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png"/>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="styles.css?v=24"/>
+<link rel="stylesheet" href="styles.css?v=25"/>
 <script src="gsap.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js';document.head.appendChild(s)"></script>
 <script src="jspdf.umd.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';document.head.appendChild(s)"></script>
 <script>
@@ -102,6 +102,30 @@ function __mayaPaintBanner(){
 window.openInChrome=function(){
   var host=location.host+location.pathname+location.search;
   location.href='intent://'+host+'#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(location.href)+';end';
+};
+window.installApp = async function(){
+  if(__mayaStandalone()){ if(window.toast) toast('O app já está instalado.'); return; }
+  if(window._pwaPrompt){
+    try{ window._pwaPrompt.prompt(); await window._pwaPrompt.userChoice; }catch(e){}
+    window._pwaPrompt=null;
+    __mayaPaintBanner();
+    return;
+  }
+  var ua=navigator.userAgent||'';
+  if(__mayaInApp()){ openInChrome(); return; }
+  if(/iPhone|iPad|iPod/i.test(ua)){
+    if(window.toast) toast('No iPhone: Safari → Compartilhar → Adicionar à Tela de Início.');
+    return;
+  }
+  if(/Android/i.test(ua) && /Firefox/i.test(ua)){
+    if(window.toast) toast('No Firefox: menu ⋮ → Instalar.');
+    return;
+  }
+  if(/Android/i.test(ua)){
+    if(window.toast) toast('No Chrome: toque em ⋮ no canto e depois em Instalar app.');
+    return;
+  }
+  if(window.toast) toast('No Chrome ou Edge: menu ⋮ → Instalar MAYA Garden.');
 };
 window.addEventListener('beforeinstallprompt',function(e){
   e.preventDefault();

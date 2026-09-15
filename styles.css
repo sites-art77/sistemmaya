@@ -447,9 +447,12 @@ body.maya-readonly main button[disabled]{opacity:.55;cursor:not-allowed}
 #pwa-banner button{margin-left:auto;min-height:40px;border:0;border-radius:10px;background:#fff;color:#145214;font-weight:800;padding:.45rem .8rem}
 #pwa-banner button.pwa-x{margin-left:0;min-height:36px;min-width:36px;padding:0;background:transparent;color:#fff;font-size:1.2rem;line-height:1}
 body.has-pwa-banner{padding-bottom:88px}
+body.has-pwa-banner .editor-sticky{bottom:calc(var(--kb, 0px) + 78px)}
+body.kb-open #pwa-banner{display:none!important}
 @media(display-mode:standalone),(display-mode:fullscreen){
   #pwa-banner{display:none!important}
   body.has-pwa-banner{padding-bottom:0}
+  body.has-pwa-banner .editor-sticky{bottom:var(--kb, 0px)}
 }
 @media (pointer: coarse){
   .maya-input,.maya-select,.maya-textarea{font-size:16px}
