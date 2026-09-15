@@ -14,15 +14,17 @@
     if (typeof window.toast === 'function') window.toast(msg);
   }
 
+  function ua() { return navigator.userAgent || ''; }
   function isIOS() {
-    const ua = navigator.userAgent || '';
-    return /iPad|iPhone|iPod/i.test(ua) ||
+    return /iPad|iPhone|iPod/i.test(ua()) ||
       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   }
-
+  function isAndroid() {
+    return /Android/i.test(ua());
+  }
   function isTouch() {
     try {
-      return matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || isIOS();
+      return matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || isIOS() || isAndroid();
     } catch (_) {
       return 'ontouchstart' in window;
     }
@@ -102,14 +104,20 @@
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
-    a.target = '_blank';
+    a.type = 'application/pdf';
     a.rel = 'noopener';
+    /* Android Chrome baixa melhor SEM target=_blank. iOS precisa abrir o viewer. */
+    if (isIOS()) {
+      a.target = '_blank';
+    }
     document.body.appendChild(a);
     a.click();
     a.remove();
 
     if (isIOS()) {
       toast('Se o PDF abrir, toque em Compartilhar e depois Salvar em Arquivos.');
+    } else if (isAndroid()) {
+      toast('PDF salvo em Downloads. Se abrir a visualização, use os 3 pontinhos para baixar.');
     } else {
       toast('Download do PDF iniciado.');
     }
@@ -237,7 +245,9 @@
         <p class="pdf-ready-tip">
           ${ios
             ? 'No iPhone: envie só o arquivo, sem legenda. Se o WhatsApp recusar, baixe o PDF e anexe pelo clipe.'
-            : 'O arquivo entra em Downloads. Depois você pode enviar no WhatsApp.'}
+            : isAndroid()
+              ? 'No Android: Enviar no WhatsApp abre a lista de apps. Ou baixe e anexe pelo clipe. O arquivo fica em Downloads.'
+              : 'O arquivo entra em Downloads. Depois você pode enviar no WhatsApp.'}
         </p>
         <button type="button" class="pdf-ready-close" id="pdf-ready-close">Fechar</button>
       </section>
