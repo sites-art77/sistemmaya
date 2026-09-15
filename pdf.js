@@ -16,6 +16,19 @@ async function loadImageDataUrl(src){
 
 function brlPDF(v){ return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function safeFile(s){ return String(s||'Cliente').normalize('NFC').replace(/[<>:"/\\|?*\u0000-\u001F]/g,' ').replace(/\s+/g,' ').trim().slice(0,56)||'Cliente'; }
+function deliverPdf(doc, fname){
+  const filename = fname || 'orcamento.pdf';
+  try{
+    if(typeof window.onMayaPdfReady === 'function'){
+      const blob = doc.output('blob');
+      window.onMayaPdfReady(blob, filename);
+      return;
+    }
+  }catch(e){ console.warn('Entrega do PDF no celular falhou:', e); }
+  doc.save(filename);
+}
+
+
 
 function fmtDPDF(iso){ try{ const p=String(iso||'').slice(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:String(iso||''); }catch{ return String(iso||''); } }
 
@@ -188,7 +201,7 @@ async function gerarPDF(budget){
   for(let i=1;i<=pages;i++){ doc.setPage(i); watermark(); headerFooter(i,pages); }
   // header/footer foram desenhados após watermark? Reordem: watermark por cima com opacity baixa = legível. Mantém.
   const fname = `MAYA Garden - Orçamento ${budget.number} - ${safeFile(budget.client?.name)}.pdf`;
-  doc.save(fname);
+  deliverPdf(doc, fname);
 }
 window.gerarPDF = gerarPDF;
 
@@ -261,6 +274,6 @@ async function gerarRecibo(budget, entryId){
   doc.setFontSize(7.5); doc.setTextColor(110,110,110);
   doc.text(`${st.company} • Petrópolis-RJ`, W/2, H-10, {align:'center'});
   watermark();
-  doc.save(`recibo-${budget.number||'s-n'}.pdf`);
+  deliverPdf(doc, `recibo-${budget.number||'s-n'}.pdf`);
 }
 window.gerarRecibo = gerarRecibo;

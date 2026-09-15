@@ -775,7 +775,7 @@ window.renderList = ()=>{
     <div class="flex gap-1 mt-2 flex-wrap text-xs">
       <a class="maya-btn-ghost px-2 py-1" href="#/editar/${b.id}">Editar</a>
       <button class="maya-btn-ghost px-2 py-1" onclick="dupBudget('${b.id}')">⧉ Duplicar</button>
-      <button class="maya-btn-ghost px-2 py-1" onclick="pdfBudget('${b.id}')">PDF</button>
+      <button class="maya-btn-ghost px-2 py-1" onclick="pdfBudget('${b.id}')">⬇ Baixar PDF</button>
       <button class="maya-btn-ghost px-2 py-1" onclick="printOS('${b.id}')">OS</button>
       <button class="maya-btn-ghost px-2 py-1" onclick="zapBudget('${b.id}')">Copiar</button>
       <button class="maya-btn-ghost px-2 py-1" onclick="openZapBudget('${b.id}')">WhatsApp</button>
