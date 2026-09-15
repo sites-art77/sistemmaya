@@ -47,6 +47,7 @@
     const root = document.getElementById('pdf-ready-root');
     if (root) root.remove();
   }
+  window.closePdfReady = closePdfReady;
 
   function hideBusy() {
     const el = document.getElementById('pdf-busy-root');
@@ -266,6 +267,12 @@
               ? 'No Android: Mandar no WhatsApp abre a lista de apps. Toque em WhatsApp e escolha a conversa. O PDF vai anexo.'
               : 'O arquivo entra em Downloads. Depois você pode enviar no WhatsApp.'}
         </p>
+        ${state.budget && state.budget.id ? `
+        <div class="pdf-ready-flags">
+          <button type="button" class="pdf-ready-secondary" id="pdf-st-ok">Aprovado</button>
+          <button type="button" class="pdf-ready-secondary" id="pdf-st-no">Recusado</button>
+          <button type="button" class="pdf-ready-secondary" id="pdf-st-del">Apagar</button>
+        </div>` : ''}
         <button type="button" class="pdf-ready-close" id="pdf-ready-close">Fechar</button>
       </section>
     `;
@@ -281,6 +288,15 @@
     root.querySelector('#pdf-ready-open').addEventListener('click', openPdf);
     root.querySelector('#pdf-ready-share').addEventListener('click', sharePdf);
     root.querySelector('#pdf-ready-whatsapp').addEventListener('click', shareWhatsApp);
+    const bid = state.budget && state.budget.id;
+    if (bid) {
+      const ok = root.querySelector('#pdf-st-ok');
+      const no = root.querySelector('#pdf-st-no');
+      const del = root.querySelector('#pdf-st-del');
+      if (ok) ok.addEventListener('click', function () { if (window.setStatus) window.setStatus(bid, 'aprovado'); });
+      if (no) no.addEventListener('click', function () { if (window.setStatus) window.setStatus(bid, 'recusado'); });
+      if (del) del.addEventListener('click', function () { if (window.delBudget) window.delBudget(bid); });
+    }
 
     if (!shareOk) {
       const shareBtn = root.querySelector('#pdf-ready-share');
@@ -364,7 +380,8 @@
         display:flex;align-items:center;justify-content:center;gap:7px;
       }
       .pdf-ready-tip{margin:12px 4px 5px;color:#8fa895;font-size:.76rem;line-height:1.35}
-      .pdf-ready-close{border:0;background:transparent;color:#a9b9ac;padding:10px 18px 3px}
+      .pdf-ready-flags{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+      .pdf-ready-flags button{min-height:42px;font-size:.8rem}
       @media (min-width:700px){
         #pdf-ready-root{align-items:center}
         .pdf-ready-sheet{padding:18px 22px 20px}

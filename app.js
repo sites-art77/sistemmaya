@@ -660,42 +660,54 @@ function paintPreview(){
   paintPreviewOnly(); paintItems();
 }
 
-window.saveDraft = async (isEdit)=>{
+window.persistDraft = async (opts={})=>{
+  const goList = opts.goList!==false;
   collectEditor();
-  if(!Draft.client.name){ toast('Preencha o nome do cliente'); $('#f-name').focus(); return; }
+  if(!Draft.client.name){ toast('Preencha o nome do cliente'); $('#f-name')?.focus(); return false; }
   const hasItem = (Draft.items||[]).some(it=>String(it.desc||'').trim() && Number(it.unit)>0);
   const hasFree = String(Draft.serviceText||'').trim().length>0;
-  if(!hasItem && !hasFree){ toast('Escreva a descrição do serviço ou adicione um item'); return; }
-  if(!(Number(Draft.total)>0) && !hasItem){ toast('Informe o valor do serviço'); $('#f-servicevalue')?.focus(); return; }
+  if(!hasItem && !hasFree){ toast('Escreva a descrição do serviço ou adicione um item'); return false; }
+  if(!(Number(Draft.total)>0) && !hasItem){ toast('Informe o valor do serviço'); $('#f-servicevalue')?.focus(); return false; }
   window._dirty=false;
   Draft.photos = [];
   Draft.updatedAt = new Date().toISOString();
+  if(!Draft.createdAt) Draft.createdAt = new Date().toISOString();
   const all = (Store.budgets||[]).map(b=>({...b, photos:[]}));
   const ix = all.findIndex(b=>b.id===Draft.id);
   if(ix>=0) all[ix]=structuredClone(Draft); else all.push(structuredClone(Draft));
   try{ Store.budgets = all; }
-  catch(e){ toast('Sem espaço no aparelho. Exclua orçamentos antigos e tente de novo.'); return; }
-  // upsert cliente
+  catch(e){ toast('Sem espaço no aparelho. Exclua orçamentos antigos e tente de novo.'); return false; }
   const cs = Store.clients||[];
-  if(Draft.client.name && !cs.some(c=>c.name.toLowerCase()===Draft.client.name.toLowerCase())){ cs.push({id:Store.uid(),...Draft.client}); Store.clients=cs; }
-  toast('Salvando no Supabase…');
+  if(Draft.client.name && !cs.some(c=>c.name.toLowerCase()===Draft.client.name.toLowerCase())){
+    cs.push({id:Store.uid(),...Draft.client}); Store.clients=cs;
+  }
   let cloudOk=true;
   try{
     if(window.CloudSync?.flushPush) cloudOk = await window.CloudSync.flushPush();
     else if(window.CloudSync?.pushLocal) cloudOk = await window.CloudSync.pushLocal(false,true);
   }catch(e){ cloudOk=false; }
-  toast(cloudOk!==false ? 'Orçamento salvo no Supabase!' : 'Salvo neste aparelho. A nuvem não respondeu.');
-  if(window.gsap) gsap.fromTo('.budget-paper',{scale:.99},{scale:1,duration:.3});
-  location.hash = '#/orcamentos';
+  if(goList){
+    toast(cloudOk!==false ? 'Orçamento salvo no Supabase!' : 'Salvo neste aparelho. A nuvem não respondeu.');
+    if(window.gsap) gsap.fromTo('.budget-paper',{scale:.99},{scale:1,duration:.3});
+    location.hash = '#/orcamentos';
+  }
+  return true;
 };
+window.saveDraft = async ()=> window.persistDraft({goList:true});
 window.pickClient = id=>{ const c=(Store.clients||[]).find(x=>x.id===id); if(!c||!Draft) return; Draft.client={name:c.name,phone:c.phone||'',address:c.address||''}; $('#f-name').value=c.name; $('#f-phone').value=c.phone||''; $('#f-addr').value=c.address||''; paintPreview(); };
 window.saveClientFromDraft = ()=>{ collectSilent(); if(!Draft.client.name) return toast('Nome vazio'); const cs=Store.clients||[]; cs.push({id:Store.uid(),...Draft.client}); Store.clients=cs; toast('Cliente salvo!'); };
 
-window.doPDF = async ()=>{ collectSilent(); recalcDraft(); if(!Draft.client.name){ toast('Preencha cliente antes do PDF'); return; }
+window.doPDF = async ()=>{
+  collectSilent(); recalcDraft();
+  if(!Draft.client.name){ toast('Preencha cliente antes do PDF'); return; }
   const hasItem = (Draft.items||[]).some(it=>String(it.desc||'').trim());
   const hasFree = String(Draft.serviceText||'').trim().length>0;
   if(!hasItem && !hasFree){ toast('Escreva a descrição do serviço ou adicione um item'); return; }
-  toast('Gerando PDF com marca d\'água…'); await gerarPDF(Draft); };
+  toast('Salvando e gerando PDF…');
+  const ok = await persistDraft({goList:false});
+  if(ok===false) return;
+  await gerarPDF(Draft);
+};
 window.copyZap = ()=>{ collectSilent(); recalcDraft(); const t=zapFill(Draft); navigator.clipboard?.writeText(t).then(()=>toast('Mensagem copiada! Anexe o PDF no WhatsApp.')); };
 
 /* ---------- drawer/modal ---------- */
@@ -932,7 +944,8 @@ window.renderList = ()=>{
     <div class="quote-card-actions">
       <button type="button" class="maya-btn" ${onCall('pdfBudget', b.id)}>PDF</button>
       <button type="button" class="maya-btn-ghost" ${onCall('openZapBudget', b.id)}>WhatsApp</button>
-      <button type="button" class="maya-btn-ghost" ${onCall('quoteMore', b.id)}>Mais</button>
+      ${es!=='aprovado'?`<button type="button" class="maya-btn-ghost" ${onCall('setStatus', b.id, 'aprovado')}>Aprovado</button>`:''}
+      <button type="button" class="maya-btn-ghost visit-del" ${onCall('delBudget', b.id)}>Apagar</button>
     </div>
   </div>`;}).join('') || emptyState('Nada por aqui','Nenhum orçamento com este filtro. Crie o primeiro em segundos.','Novo orçamento','#/novo');
 };
@@ -950,8 +963,25 @@ window.quoteMore=id=>{
     </div>`);
 };
 window.dupBudget = id=>{ const b=(Store.budgets||[]).find(x=>x.id===id); if(!b) return; const c=structuredClone(b); c.id=Store.uid(); c.number=Store.nextNumber(); c.status='pendente'; c.date=todayISO(); c.validity=addDays(todayISO(), Number(Store.settings.validityDays||15)); c.paid={entries:[]}; delete c.contractId; c.createdAt=new Date().toISOString(); const a=Store.budgets; a.push(c); Store.budgets=a; toast('Duplicado como '+c.number); renderList(); };
-window.delBudget = async id=>{ if(!await confirmModal('Excluir orçamento','Esta ação não pode ser desfeita. Deseja excluir este orçamento?')) return; Store.budgets=(Store.budgets||[]).filter(b=>b.id!==id); renderList(); toast('Orçamento excluído.'); };
-window.setStatus = (id,s)=>{ const a=Store.budgets; const b=a.find(x=>x.id===id); b.status=s; Store.budgets=a; renderList(); };
+window.setStatus = (id,s)=>{
+  const a=Store.budgets||[];
+  const b=a.find(x=>x.id===id);
+  if(!b) return;
+  b.status=s;
+  Store.budgets=a;
+  if(Draft && Draft.id===id) Draft.status=s;
+  if(typeof renderList==='function' && (location.hash||'').startsWith('#/orcamentos')) renderList();
+  toast('Status: '+s+'.');
+};
+window.delBudget = async id=>{
+  if(!await confirmModal('Excluir orçamento','Esta ação não pode ser desfeita. Deseja excluir este orçamento?')) return;
+  Store.budgets=(Store.budgets||[]).filter(b=>b.id!==id);
+  if(typeof window.closePdfReady==='function') try{ window.closePdfReady(); }catch(e){}
+  toast('Orçamento excluído.');
+  if((location.hash||'').startsWith('#/editar/') || (location.hash||'').startsWith('#/novo')) location.hash='#/orcamentos';
+  else if(typeof renderList==='function') renderList();
+  else render();
+};
 window.pdfBudget = async id=>{ const b=(Store.budgets||[]).find(x=>x.id===id); toast('Gerando PDF…'); await gerarPDF(normItems(structuredClone(b))); };
 window.zapBudget = id=>{ const b=(Store.budgets||[]).find(x=>x.id===id); navigator.clipboard?.writeText(zapFill(b)).then(()=>toast('Msg copiada! Anexe o PDF.')); };
 
