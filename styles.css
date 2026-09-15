@@ -366,3 +366,10 @@ body.maya-readonly main button[disabled]{opacity:.55;cursor:not-allowed}
 .more-opts>summary::-webkit-details-marker{display:none}
 .more-opts>summary::after{content:"▾";margin-left:auto;opacity:.7}
 .more-opts[open]>summary::after{content:"▴"}
+
+.m2-box{border:1px solid var(--line);border-radius:12px;padding:.7rem;background:#0E160F}
+.m2-rate{padding:.7rem 0;border-bottom:1px solid var(--line)}
+.m2-rate:last-of-type{border-bottom:0}
+@media(max-width:700px){
+  .m2-rate .grid.grid-cols-3{grid-template-columns:1fr!important}
+}

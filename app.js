@@ -262,6 +262,42 @@ function afterRender(r){
   if(r.startsWith('#/relatorios') && window.repAfter){ try{ repAfter(); }catch(e){} }
 }
 
+function m2Services(){
+  const p = Store.pricing||{};
+  return [
+    {k:'grama', t:'Corte de grama', rate:Number(p.m2Grama||8)},
+    {k:'manut', t:'Manutenção / limpeza', rate:Number(p.m2ManutIdeal||6.5)},
+    {k:'impl', t:'Implantação de jardim', rate:Number(p.m2ImplIdeal||180)},
+    {k:'irrig', t:'Irrigação', rate:Number(p.m2Irrigacao||30)},
+    {k:'proj', t:'Projeto paisagístico', rate:Number(p.projetoM2Ideal||40)}
+  ];
+}
+window.applyM2 = function(){
+  if(!Draft) return;
+  const tipo = ($('#f-m2tipo')||{}).value;
+  const area = Number(($('#f-m2area')||{}).value||0);
+  const svc = m2Services().find(x=>x.k===tipo) || m2Services()[0];
+  if(!(area>0)){ toast('Informe a área em m²'); $('#f-m2area')?.focus(); return; }
+  const val = Math.round(area * Number(svc.rate) * 100)/100;
+  Draft.serviceValue = val;
+  const inp = $('#f-servicevalue'); if(inp) inp.value = val;
+  const line = svc.t+' — '+area+' m² × '+brl(svc.rate)+'/m²';
+  const tx = $('#f-servicetext');
+  if(tx){
+    const cur = String(tx.value||'').trim();
+    tx.value = cur ? cur+'\n'+line : line;
+    Draft.serviceText = tx.value;
+  }
+  window._dirty = true;
+  recalcDraft(); paintEditorTotalsOnly(); paintPreviewOnly();
+  toast(area+' m² × '+brl(svc.rate)+' = '+brl(val));
+};
+window.hintM2 = function(){
+  const tipo = ($('#f-m2tipo')||{}).value;
+  const svc = m2Services().find(x=>x.k===tipo);
+  const h = $('#m2-hint'); if(h && svc) h.textContent = svc.t+': '+brl(svc.rate)+' por m²';
+};
+
 /* ---------- Editor ---------- */
 function statusOpts(s){ return ['pendente','aprovado','recusado','expirado'].map(o=>`<option ${s===o?'selected':''}>${o}</option>`).join(''); }
 
@@ -305,6 +341,15 @@ function viewEditor(isEdit){
         <p class="text-xs mb-2" style="color:var(--muted)">Escreva tudo do orçamento aqui. Sem catálogo, sem pacote. Esse texto sai no PDF.</p>
         <textarea id="f-servicetext" class="maya-textarea free-scope" rows="10" placeholder="Ex: Limpeza completa do jardim, poda das cercas-vivas, capina dos canteiros, adubação e varrição. Material incluso. Execução em 1 dia.">${esc(d.serviceText||'')}</textarea>
         <label class="text-xs font-bold block mt-2">Valor do serviço R$<input type="number" step="any" id="f-servicevalue" class="maya-input" value="${esc(d.serviceValue||0)}" placeholder="0"></label>
+        <div class="m2-box mt-3">
+          <div class="text-xs font-extrabold mb-1">Calcular por m²</div>
+          <select id="f-m2tipo" class="maya-select mb-2" onchange="hintM2()">${m2Services().map(s=>`<option value="${s.k}">${esc(s.t)} — ${brl(s.rate)}/m²</option>`).join('')}</select>
+          <div class="grid grid-cols-2 gap-2">
+            <input type="number" step="any" min="0" id="f-m2area" class="maya-input" placeholder="Área em m²">
+            <button type="button" class="maya-btn" onclick="applyM2()">Aplicar</button>
+          </div>
+          <div class="text-xs mt-1" id="m2-hint" style="color:var(--muted)">${esc(m2Services()[0].t)}: ${brl(m2Services()[0].rate)} por m²</div>
+        </div>
         <button class="maya-btn-ghost text-sm w-full mt-2" onclick="openCalc(null)">Quanto cobrar?</button>
         <div id="tip-last" class="text-xs mt-1" style="color:var(--muted)"></div>
       </div>
@@ -904,6 +949,25 @@ function viewConfig(){
   const st=Store.settings, p=Store.pricing, write=window.MayaAuth?.canWrite?.()!==false, disabled=write?'':'disabled';
   return `<h1 class="text-2xl font-black mb-3 anim-in">Configurações</h1>
   <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Sessão atual</b><div class="text-xs" style="color:var(--muted)">O sistema exige login e guarda os dados compartilhados na nuvem.</div></div></div><div class="mt-3">${window.CloudSync?.accountHtml?window.CloudSync.accountHtml():'Carregando sessão…'}</div></div>
+  <div class="maya-card p-4 mb-3 anim-in" style="opacity:1">
+    <h2 class="font-extrabold mb-1">Preços por metro quadrado</h2>
+    <p class="text-xs mb-3" style="color:var(--muted)">Valores em R$ por m². O orçamento usa o preço padrão no cálculo.</p>
+    ${[
+      ['Corte de grama','m2Grama',null,null],
+      ['Manutenção / limpeza','m2ManutIdeal','m2ManutMin','m2ManutMax'],
+      ['Implantação de jardim','m2ImplIdeal','m2ImplMin','m2ImplMax'],
+      ['Irrigação','m2Irrigacao',null,null],
+      ['Projeto paisagístico','projetoM2Ideal','projetoM2Min','projetoM2Max']
+    ].map(([name,ideal,min,max])=>`<div class="m2-rate">
+      <b>${name}</b>
+      <div class="grid ${min?'grid-cols-3':'grid-cols-1'} gap-2 text-sm mt-1">
+        <label class="font-bold">Padrão R$/m²<input ${disabled} type="number" step="any" min="0" id="p-${ideal}" class="maya-input" value="${esc(p[ideal])}"></label>
+        ${min?`<label class="font-bold">Mín<input ${disabled} type="number" step="any" min="0" id="p-${min}" class="maya-input" value="${esc(p[min])}"></label>`:''}
+        ${max?`<label class="font-bold">Máx<input ${disabled} type="number" step="any" min="0" id="p-${max}" class="maya-input" value="${esc(p[max])}"></label>`:''}
+      </div>
+    </div>`).join('')}
+    <button ${disabled} class="maya-btn mt-3" onclick="savePricing()">Salvar preços m²</button>
+  </div>
   <div class="grid lg:grid-cols-2 gap-3">
   <div class="maya-card p-4 anim-in" style="opacity:1"><h2 class="font-extrabold mb-2">Empresa (sai no PDF)</h2>
     <div class="grid grid-cols-2 gap-2 text-sm">
@@ -924,7 +988,7 @@ function viewConfig(){
   </div>
   <div class="maya-card p-4 anim-in" style="opacity:1"><h2 class="font-extrabold mb-2">Tabela de referência (dica de preço)</h2>
     <div class="grid grid-cols-3 gap-2 text-sm">
-    ${Object.entries({marginPct:'Margem %',horaMin:'Hora mín',horaIdeal:'Hora ideal',horaMax:'Hora máx',m2ManutMin:'Manut m² mín',m2ManutIdeal:'Manut ideal',m2ManutMax:'Manut máx',m2ImplMin:'Impl mín',m2ImplIdeal:'Impl ideal',m2ImplMax:'Impl máx',projetoM2Min:'Proj mín',projetoM2Ideal:'Proj ideal',projetoM2Max:'Proj máx',vasoMin:'Vaso mín',vasoIdeal:'Vaso ideal',vasoMax:'Vaso máx',visitaOrqMin:'Visita orq mín',visitaOrqIdeal:'Visita ideal',visitaOrqMax:'Visita máx',orquidarioMin:'Orquid mín',orquidarioIdeal:'Orquid ideal',orquidarioMax:'Orquid máx'}).map(([k,l])=>`<label class="font-bold">${l}<input ${disabled} type="number" step="any" id="p-${k}" class="maya-input" value="${esc(p[k])}"></label>`).join('')}
+    ${Object.entries({marginPct:'Margem %',horaMin:'Hora mín',horaIdeal:'Hora ideal',horaMax:'Hora máx',vasoMin:'Vaso mín',vasoIdeal:'Vaso ideal',vasoMax:'Vaso máx',visitaOrqMin:'Visita orq mín',visitaOrqIdeal:'Visita ideal',visitaOrqMax:'Visita máx',orquidarioMin:'Orquid mín',orquidarioIdeal:'Orquid ideal',orquidarioMax:'Orquid máx'}).map(([k,l])=>`<label class="font-bold">${l}<input ${disabled} type="number" step="any" id="p-${k}" class="maya-input" value="${esc(p[k])}"></label>`).join('')}
     </div>
     <button ${disabled} class="maya-btn mt-3" onclick="savePricing()">Salvar tabela</button>
     ${write?'<div class="mt-4 border-t pt-2 text-sm"><b class="text-red-700">Zona de perigo</b><div class="flex gap-2 mt-1 flex-wrap"><button class="maya-btn-ghost text-sm" onclick="seedSample()">Dados exemplo</button><button class="maya-btn-ghost text-sm !text-red-700 !border-red-300" onclick="confirmReset()">Apagar tudo</button></div></div>':'<div class="mt-4 text-xs" style="color:var(--muted)">Perfil visitante: somente visualização.</div>'}

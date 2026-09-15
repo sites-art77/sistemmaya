@@ -71,6 +71,8 @@ const defaultPackages = [
 const defaultPricing = {
   marginPct: 30,
   horaMin: 30, horaIdeal: 55, horaMax: 80,
+  m2Grama: 8,
+  m2Irrigacao: 30,
   m2ManutMin: 4, m2ManutIdeal: 6.5, m2ManutMax: 12,
   m2ImplMin: 80, m2ImplIdeal: 180, m2ImplMax: 350,
   projetoM2Min: 20, projetoM2Ideal: 40, projetoM2Max: 60,
