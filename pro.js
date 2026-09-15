@@ -101,15 +101,15 @@ function dashProHTML(){
   </div>
   <div class="grid lg:grid-cols-3 gap-3 mt-3">
     <div class="maya-card p-4 anim-in"><h2 class="font-extrabold mb-2">Validades</h2>
-      ${expiring.length?expiring.map(b=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1"><b>${esc(b.client?.name)}</b> <span style="color:var(--muted)">vence ${fmtD(b.validity)} • ${brl(b.total)}</span></div><button class="maya-btn-ghost text-xs px-2 py-1" onclick="dupBudget('${b.id}')">Renovar</button></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Nada vencendo em 7 dias. ✓</p>'}
-      ${expired.length?`<div class="text-xs font-bold mt-2" style="color:var(--muted)">Vencidos recentes</div>`+expired.map(b=>`<div class="flex items-center gap-2 text-xs py-1"><div class="flex-1">${esc(b.client?.name)} • ${fmtD(b.validity)}</div><button class="maya-btn-ghost text-xs px-2 py-1" onclick="dupBudget('${b.id}')">Renovar</button></div>`).join(''):''}
+      ${expiring.length?expiring.map(b=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1"><b>${esc(b.client?.name)}</b> <span style="color:var(--muted)">vence ${fmtD(b.validity)} • ${brl(b.total)}</span></div><button class="maya-btn-ghost text-xs px-2 py-1" ${onCall('dupBudget', b.id)}>Renovar</button></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Nada vencendo em 7 dias. ✓</p>'}
+      ${expired.length?`<div class="text-xs font-bold mt-2" style="color:var(--muted)">Vencidos recentes</div>`+expired.map(b=>`<div class="flex items-center gap-2 text-xs py-1"><div class="flex-1">${esc(b.client?.name)} • ${fmtD(b.validity)}</div><button class="maya-btn-ghost text-xs px-2 py-1" ${onCall('dupBudget', b.id)}>Renovar</button></div>`).join(''):''}
     </div>
     <div class="maya-card p-4 anim-in"><h2 class="font-extrabold mb-2">Próximas visitas</h2>
-      ${upcoming.length?upcoming.map(v=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1"><b>${fmtD(v.date)}</b> ${esc(v.time||'')} — ${esc(v.client)}<div class="text-xs" style="color:var(--muted)">${esc(v.service||'')}</div></div><button class="maya-btn-ghost text-xs px-2 py-1" onclick="toggleVisit('${v.id}')">✓</button></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Sem visitas agendadas. <a class="font-bold" style="color:var(--maya-accent)" href="#/agenda">Agendar →</a></p>'}
+      ${upcoming.length?upcoming.map(v=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1"><b>${fmtD(v.date)}</b> ${esc(v.time||'')} — ${esc(v.client)}<div class="text-xs" style="color:var(--muted)">${esc(v.service||'')}</div></div><button class="maya-btn-ghost text-xs px-2 py-1" ${onCall('toggleVisit', v.id)}>✓</button></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Sem visitas agendadas. <a class="font-bold" style="color:var(--maya-accent)" href="#/agenda">Agendar →</a></p>'}
     </div>
   </div>
   <div class="maya-card p-4 mt-3 anim-in"><h2 class="font-extrabold mb-2">Retomar contato <span class="text-xs font-normal" style="color:var(--muted)">pendentes há 5+ dias</span></h2>
-    ${follows.length?follows.slice(0,5).map(b=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1"><b>${esc(b.client?.name)}</b> <span style="color:var(--muted)">há ${ageDays(b)} dias • ${brl(b.total)}</span></div><button class="maya-btn-ghost text-xs px-2 py-1" onclick="copyFollow('${b.id}')">Copiar</button><button class="maya-btn-ghost text-xs px-2 py-1" onclick="openFollowZap('${b.id}')">WhatsApp</button><a class="maya-btn-ghost text-xs px-2 py-1" href="#/editar/${b.id}">Abrir</a></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Nenhum orçamento parado. Bom ritmo.</p>'}
+    ${follows.length?follows.slice(0,5).map(b=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1"><b>${esc(b.client?.name)}</b> <span style="color:var(--muted)">há ${ageDays(b)} dias • ${brl(b.total)}</span></div><button class="maya-btn-ghost text-xs px-2 py-1" ${onCall('copyFollow', b.id)}>Copiar</button><button class="maya-btn-ghost text-xs px-2 py-1" ${onCall('openFollowZap', b.id)}>WhatsApp</button><a class="maya-btn-ghost text-xs px-2 py-1" href="#/editar/${b.id}">Abrir</a></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Nenhum orçamento parado. Bom ritmo.</p>'}
   </div>`;
 }
 function dashAfter(){
@@ -160,16 +160,16 @@ function clientsProHTML(q){
     const ap=bs.filter(b=>b.status==='aprovado').reduce((s,b)=>s+Number(b.total||0),0);
     const last=bs.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0];
     return `<div class="maya-card p-4 anim-in quote-card" style="opacity:1">
-      <button type="button" class="quote-main" onclick="clientDetail('${c.id}')">
+      <button type="button" class="quote-main" ${onCall('clientDetail', c.id)}>
         <div class="flex items-center gap-2"><b>${esc(c.name)}</b><div class="flex-1"></div><span class="price">${brl(ap)}</span></div>
         <div class="quote-who">${esc(c.phone||'sem WhatsApp')}</div>
         <div class="quote-meta">${esc(c.address||'sem endereço')} • ${pl(bs.length,'orçamento','orçamentos')}</div>
         ${last?`<div class="quote-meta">Último: Nº ${esc(last.number)} • ${fmtD(last.date)}</div>`:''}
       </button>
       <div class="quote-card-actions">
-        <button type="button" class="maya-btn" onclick='openZapText(${JSON.stringify(c.phone||'')}, ${JSON.stringify('Olá '+c.name+'! Aqui é MAYA Garden.')})'>WhatsApp</button>
-        <button type="button" class="maya-btn-ghost" onclick="newForClient('${c.id}')">Orçamento</button>
-        <button type="button" class="maya-btn-ghost" onclick="editClient('${c.id}')">Editar</button>
+        <button type="button" class="maya-btn" ${onCall('openZapText', c.phone||'', 'Olá '+c.name+'! Aqui é MAYA Garden.')}>WhatsApp</button>
+        <button type="button" class="maya-btn-ghost" ${onCall('newForClient', c.id)}>Orçamento</button>
+        <button type="button" class="maya-btn-ghost" ${onCall('editClient', c.id)}>Editar</button>
       </div>
     </div>`;}).join('')||emptyState('Sem clientes','Cadastre para ver histórico e chamar no WhatsApp.','Novo cliente',"addClient()")}</div>`;
 }
@@ -194,9 +194,9 @@ window.clientDetail=id=>{
   openDrawer(`<h3 class="font-black text-lg">${esc(c.name)}</h3>
   <div class="text-sm mb-2" style="color:var(--muted)">${esc(c.phone||'sem WhatsApp')}<br>${esc(c.address||'sem endereço')}</div>
   <div class="quote-card-actions mb-3">
-    ${hi?`<button class="maya-btn" onclick='openZapText(${JSON.stringify(c.phone||'')}, ${JSON.stringify('Olá '+c.name+'! Aqui é MAYA Garden.')})'>WhatsApp</button>`:''}
+    ${hi?`<button class="maya-btn" ${onCall('openZapText', c.phone||'', 'Olá '+c.name+'! Aqui é MAYA Garden.')}>WhatsApp</button>`:''}
     ${hi?`<a class="maya-btn-ghost" href="tel:+${hi}" style="text-align:center;display:flex;align-items:center;justify-content:center">Ligar</a>`:''}
-    <button class="maya-btn-ghost" onclick="closeDrawer();newForClient('${c.id}')">Orçamento</button>
+    <button class="maya-btn-ghost" ${onThen('closeDrawer()', 'newForClient', c.id)}>Orçamento</button>
   </div>
   <div class="grid grid-cols-3 gap-2 text-center my-2">
     <div class="maya-card p-2"><div class="text-[11px]" style="color:var(--muted)">Orçamentos</div><div class="font-black">${bs.length}</div></div>
@@ -207,7 +207,7 @@ window.clientDetail=id=>{
   ${bs.length?bs.map(b=>`<a class="cat-row" href="#/editar/${b.id}" onclick="closeDrawer()"><div class="info"><b>Nº ${esc(b.number)}</b><div class="meta">${fmtD(b.date)} • ${effStatus(b)}</div></div><div class="price">${brl(b.total)}</div></a>`).join(''):'<p class="text-xs" style="color:var(--muted)">Sem orçamentos.</p>'}
   <div class="font-extrabold text-sm mt-3 mb-1">Visitas</div>
   ${vs.length?vs.map(v=>`<div class="text-sm py-1">${fmtD(v.date)} ${esc(v.time||'')} — ${esc(v.service||'')} <span style="color:var(--muted)">(${esc(v.status||'')})</span></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Sem visitas.</p>'}
-  <div class="flex gap-2 mt-3 flex-wrap"><button class="maya-btn-ghost text-sm" onclick="closeDrawer();editClient('${c.id}')">Editar</button><button class="maya-btn-ghost text-sm visit-del" onclick="closeDrawer();delClient('${c.id}')">Apagar</button><button class="maya-btn-ghost text-sm" onclick="closeDrawer()">Fechar</button></div>`);
+  <div class="flex gap-2 mt-3 flex-wrap"><button class="maya-btn-ghost text-sm" ${onThen('closeDrawer()', 'editClient', c.id)}>Editar</button><button class="maya-btn-ghost text-sm visit-del" ${onThen('closeDrawer()', 'delClient', c.id)}>Apagar</button><button class="maya-btn-ghost text-sm" onclick="closeDrawer()">Fechar</button></div>`);
 };
 
 /* ---------- RECORRENTES ---------- */
@@ -224,10 +224,10 @@ function viewContracts(){
     <div class="text-sm" style="color:var(--muted)">${esc(c.title||'')} • desde ${fmtD(c.startDate)} ${c.lastBilled?`• última cobrança ${fmtD(c.lastBilled)}`:''}</div>
     ${c.notes?`<div class="text-xs mt-1">${esc(c.notes)}</div>`:''}
     <div class="flex gap-1 mt-2 text-xs flex-wrap">
-      ${billed?'<span class="text-xs font-bold" style="color:var(--maya-accent)">✓ cobrado este mês</span>':`<button class="maya-btn px-2 py-1" onclick="billContract('${c.id}')">Gerar cobrança</button>`}
-      <button class="maya-btn-ghost px-2 py-1" onclick="toggleContract('${c.id}')">${c.active===false?'Ativar':'Pausar'}</button>
-      <button class="maya-btn-ghost px-2 py-1" onclick="editContract('${c.id}')">Editar</button>
-      <button class="maya-btn-ghost px-2 py-1 !text-red-700" onclick="delContract('${c.id}')">Excluir</button>
+      ${billed?'<span class="text-xs font-bold" style="color:var(--maya-accent)">✓ cobrado este mês</span>':`<button class="maya-btn px-2 py-1" ${onCall('billContract', c.id)}>Gerar cobrança</button>`}
+      <button class="maya-btn-ghost px-2 py-1" ${onCall('toggleContract', c.id)}>${c.active===false?'Ativar':'Pausar'}</button>
+      <button class="maya-btn-ghost px-2 py-1" ${onCall('editContract', c.id)}>Editar</button>
+      <button class="maya-btn-ghost px-2 py-1 !text-red-700" ${onCall('delContract', c.id)}>Excluir</button>
     </div></div>`;}).join('')||emptyState('Sem contratos','Manutenções mensais geram receita todo mês.','Novo contrato',"addContract()")}</div>`;
 }
 window.addContract=()=>{ openModal('Novo contrato recorrente', MF.text('co-client','Cliente *','','Nome do cliente')+MF.text('co-title','Serviço recorrente','Manutenção mensal do jardim')+`<div class="f-row2">`+MF.num('co-value','Valor mensal R$ *',350)+MF.date('co-start','Início',todayISO())+`</div>`+`<div class="f-row2">`+MF.text('co-phone','WhatsApp','')+MF.text('co-addr','Endereço','')+`</div>`+MF.area('co-notes','Observações (ex: todo dia 5)','',2), ()=>{
@@ -323,7 +323,7 @@ function agendaProHTML(){
   for(let d=1;d<=dim;d++){ const iso=`${Y}-${String(M).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const vs=byDay[iso]||[]; const sel=window.CalDay===iso; const isToday=iso===todayISO();
     const live=vs.filter(v=>v.status!=='cancelada').length;
-    cells+=`<button onclick="calPick('${iso}')" class="cal-day${sel?' sel':''}${isToday?' today':''}">${d}${live?`<span class="cal-dot">${live}</span>`:''}</button>`; }
+    cells+=`<button ${onCall('calPick', iso)} class="cal-day${sel?' sel':''}${isToday?' today':''}">${d}${live?`<span class="cal-dot">${live}</span>`:''}</button>`; }
   const dayVs=(Store.visits||[]).filter(v=>v.date===window.CalDay).sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
   const nCanc=(Store.visits||[]).filter(v=>v.status==='cancelada').length;
   const due=(window.MayaReminders?.dueVisits?.()||[]);
@@ -334,7 +334,7 @@ function agendaProHTML(){
   const visitBtns=v=>{
     const st=v.status||'agendada';
     const open=st!=='concluída'&&st!=='cancelada';
-    return `<div class="visit-actions">${open?`<button class="maya-btn-ghost" onclick="toggleVisit('${v.id}')">Concluir</button><button class="maya-btn-ghost" onclick="cancelVisit('${v.id}')">Cancelar</button><button class="maya-btn-ghost" onclick="addVisitToCalendar('${v.id}')">Calendário</button>`:''}${st==='concluída'?`<button class="maya-btn-ghost" onclick="toggleVisit('${v.id}')">Reabrir</button>`:''}${st==='cancelada'?`<button class="maya-btn-ghost" onclick="reopenVisit('${v.id}')">Reativar</button>`:''}<button class="maya-btn-ghost visit-del" onclick="delVisit('${v.id}')">Apagar</button></div>`;
+    return `<div class="visit-actions">${open?`<button class="maya-btn-ghost" ${onCall('toggleVisit', v.id)}>Concluir</button><button class="maya-btn-ghost" ${onCall('cancelVisit', v.id)}>Cancelar</button><button class="maya-btn-ghost" ${onCall('addVisitToCalendar', v.id)}>Calendário</button>`:''}${st==='concluída'?`<button class="maya-btn-ghost" ${onCall('toggleVisit', v.id)}>Reabrir</button>`:''}${st==='cancelada'?`<button class="maya-btn-ghost" ${onCall('reopenVisit', v.id)}>Reativar</button>`:''}<button class="maya-btn-ghost visit-del" ${onCall('delVisit', v.id)}>Apagar</button></div>`;
   };
   return `<div class="flex items-center gap-2 mb-3 anim-in flex-wrap"><h1 class="text-2xl font-black">Agenda</h1><div class="flex-1"></div>
     <button class="maya-btn-ghost text-sm" onclick="calNav(-1)">←</button><b class="capitalize">${label}</b><button class="maya-btn-ghost text-sm" onclick="calNav(1)">→</button>
@@ -407,7 +407,7 @@ window.openPackPick = ()=>{
   ${ps.map(p=>`<div class="border rounded-xl p-3 mb-2" style="border-color:var(--line)">
     <div class="drawer-list-row !border-0 !py-0"><b>${esc(p.name)}</b><b style="color:var(--maya-accent)">${brl(packTotal(p))}</b></div>
     <div class="text-xs mb-2" style="color:var(--muted)">${esc(p.desc||'')} • ${p.items.length} itens</div>
-    <button class="maya-btn text-xs w-full" onclick="addPack('${p.id}')">Adicionar pacote</button></div>`).join('')||'<p class="text-sm" style="color:var(--muted)">Nenhum pacote. Crie em Catálogo.</p>'}
+    <button class="maya-btn text-xs w-full" ${onCall('addPack', p.id)}>Adicionar pacote</button></div>`).join('')||'<p class="text-sm" style="color:var(--muted)">Nenhum pacote. Crie em Catálogo.</p>'}
   <button class="maya-btn-ghost w-full mt-1" onclick="closeDrawer()">Fechar</button>`);
 };
 window.addPack = id=>{
@@ -560,9 +560,9 @@ window.openChecklist = (clientName)=>{
   ${CHECK_ITEMS.map(it=>`<div class="border rounded-xl p-2" style="border-color:var(--line)">
     <div class="text-sm font-bold mb-1">${it.t}</div>
     <div class="seg" data-ck="${it.k}">
-      <button data-v="ok" onclick="ckSev('${it.k}','ok')">Ok</button>
-      <button data-v="att" onclick="ckSev('${it.k}','att')">Atenção</button>
-      <button data-v="crit" onclick="ckSev('${it.k}','crit')">Crítico</button>
+      <button data-v="ok" ${onCall('ckSev', it.k, 'ok')}>Ok</button>
+      <button data-v="att" ${onCall('ckSev', it.k, 'att')}>Atenção</button>
+      <button data-v="crit" ${onCall('ckSev', it.k, 'crit')}>Crítico</button>
     </div></div>`).join('')}
   </div>
   <label class="text-xs font-bold block mt-2">Observações da visita<textarea class="maya-textarea" rows="2" id="ck-obs" placeholder="Ex: formigueiro no canto, sombrite rasgado…"></textarea></label>
@@ -614,10 +614,10 @@ function viewOS(){
     <div class="text-sm mt-1"><b>${esc(o.client?.name||'-')}</b> • ${esc(o.client?.address||'')}${o.team?` • Equipe: ${esc(o.team)}`:''}</div>
     <div class="text-xs mt-1" style="color:var(--muted)">${pl((o.items||[]).length,'tarefa','tarefas')}${o.budgetId?` • do orçamento ${esc((Store.budgets||[]).find(b=>b.id===o.budgetId)?.number||'')}`:''}</div>
     <div class="flex gap-1 mt-2 flex-wrap text-xs">
-      <button class="maya-btn-ghost px-2 py-1" onclick="printOS('${o.id}')">Imprimir</button>
+      <button class="maya-btn-ghost px-2 py-1" ${onCall('printOS', o.id)}>Imprimir</button>
       <select class="maya-select !w-36 !py-1 text-xs" onchange="setOSStatus('${o.id}',this.value)">${OS_STATUS.map(s=>`<option value="${s}" ${o.status===s?'selected':''}>${s}</option>`).join('')}</select>
-      <button class="maya-btn-ghost px-2 py-1" onclick="editOS('${o.id}')">Editar</button>
-      <button class="maya-btn-ghost px-2 py-1 !text-red-700" onclick="delOS('${o.id}')">Excluir</button>
+      <button class="maya-btn-ghost px-2 py-1" ${onCall('editOS', o.id)}>Editar</button>
+      <button class="maya-btn-ghost px-2 py-1 !text-red-700" ${onCall('delOS', o.id)}>Excluir</button>
     </div></div>`).join('')||emptyState('Sem ordens de serviço','Crie avulsa ou gere a partir de um orçamento.','Nova OS',"addOS()")}</div>`;
 }
 function osFormHTML(o){

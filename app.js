@@ -3,6 +3,20 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const brl = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+function attrJs(code){
+  const amp='&'+'amp;';
+  const quot='&'+'quot;';
+  const lt='&'+'lt;';
+  return 'onclick="'+String(code).replace(/&/g,amp).replace(/"/g,quot).replace(/</g,lt)+'"';
+}
+function onCall(fn, ...args){
+  return attrJs(String(fn)+'('+args.map(a=>JSON.stringify(a)).join(',')+')');
+}
+function onThen(pre, fn, ...args){
+  return attrJs(String(pre)+';'+String(fn)+'('+args.map(a=>JSON.stringify(a)).join(',')+')');
+}
+window.onCall = onCall;
+window.onThen = onThen;
 function numBR(v){
   if(typeof v==='number') return Number.isFinite(v)?v:0;
   let s=String(v??'').trim().replace(/[R$\s]/g,'');
@@ -758,7 +772,7 @@ const mv = id=>{ const e=document.getElementById(id); return e?e.value.trim():''
 window.openCatalogPick = ()=>{
   const cats = [...new Set(Store.catalog.map(c=>c.cat))];
   openDrawer(`<h3 class="font-black text-lg mb-2">Puxar do catálogo (preço editável depois)</h3>
-  ${cats.map(cat=>`<div class="drawer-section-title font-extrabold text-[#1A5D1A]">${esc(cat)}</div>${Store.catalog.filter(c=>c.cat===cat).map(c=>`<div class="drawer-list-row text-sm"><div><b>${esc(c.name)}</b><div class="text-xs text-gray-500">${esc(c.desc||'')} • ${brl(c.price)}/${esc(c.unit)}</div></div><button class="maya-btn text-xs" onclick="addFromCatalog('${c.id}')">+ add</button></div>`).join('')}`).join('')}
+  ${cats.map(cat=>`<div class="drawer-section-title font-extrabold text-[#1A5D1A]">${esc(cat)}</div>${Store.catalog.filter(c=>c.cat===cat).map(c=>`<div class="drawer-list-row text-sm"><div><b>${esc(c.name)}</b><div class="text-xs text-gray-500">${esc(c.desc||'')} • ${brl(c.price)}/${esc(c.unit)}</div></div><button class="maya-btn text-xs" ${onCall('addFromCatalog', c.id)}>+ add</button></div>`).join('')}`).join('')}
   <button class="maya-btn-ghost w-full mt-3" onclick="closeDrawer()">Fechar</button>`);
 };
 window.addFromCatalog = id=>{
@@ -789,7 +803,7 @@ window.openCalc = (itemIndex)=>{
   <p class="text-xs mb-3" style="color:var(--muted)">3 toques e pronto. Base 2026 Petrópolis, tudo editável em Config.</p>
   <div class="text-xs font-extrabold mb-1" style="color:var(--muted)">1 • O SERVIÇO É…</div>
   <div class="opt-grid" id="c-opts">
-    ${CALC_OPTS.map(o=>`<button class="opt" data-v="${o.v}" onclick="pickCalcTipo('${o.v}')">${o.t}<small>${o.s}</small></button>`).join('')}
+    ${CALC_OPTS.map(o=>`<button class="opt" data-v="${o.v}" ${onCall('pickCalcTipo', o.v)}>${o.t}<small>${o.s}</small></button>`).join('')}
   </div>
   <div id="c-sizebox" class="mt-3">
     <div class="text-xs font-extrabold mb-1" style="color:var(--muted)">2 • TAMANHO <span id="c-unit" class="font-normal"></span></div>
@@ -913,9 +927,9 @@ window.renderList = ()=>{
       ${b.status==='aprovado'?(()=>{const pt=paidTotal(b), tt=Number(b.total)||0, pc=tt>0?Math.min(100,100*pt/tt):0; return `<div class="flex items-center gap-2 mt-1 text-xs"><div class="p-track flex-1"><div class="p-bar" style="width:${pc.toFixed(0)}%"></div></div><b>${paidStatus(b)==='pago'?'pago':('recebido '+brl(pt)+' de '+brl(tt))}</b></div>`;})():''}
     </a>
     <div class="quote-card-actions">
-      <button type="button" class="maya-btn" onclick="pdfBudget('${b.id}')">PDF</button>
-      <button type="button" class="maya-btn-ghost" onclick="openZapBudget('${b.id}')">WhatsApp</button>
-      <button type="button" class="maya-btn-ghost" onclick="quoteMore('${b.id}')">Mais</button>
+      <button type="button" class="maya-btn" ${onCall('pdfBudget', b.id)}>PDF</button>
+      <button type="button" class="maya-btn-ghost" ${onCall('openZapBudget', b.id)}>WhatsApp</button>
+      <button type="button" class="maya-btn-ghost" ${onCall('quoteMore', b.id)}>Mais</button>
     </div>
   </div>`;}).join('') || emptyState('Nada por aqui','Nenhum orçamento com este filtro. Crie o primeiro em segundos.','Novo orçamento','#/novo');
 };
@@ -927,8 +941,8 @@ window.quoteMore=id=>{
     <label class="text-xs font-bold">Status<select class="maya-select mt-1" onchange="setStatus('${b.id}',this.value);closeDrawer()">${['pendente','aprovado','recusado','expirado'].map(s=>`<option ${b.status===s?'selected':''}>${s}</option>`).join('')}</select></label>
     <div class="flex flex-col gap-2 mt-3">
       <a class="maya-btn w-full text-center" href="#/editar/${b.id}" onclick="closeDrawer()">Abrir / editar</a>
-      <button class="maya-btn-ghost w-full" onclick="closeDrawer();dupBudget('${b.id}')">Duplicar</button>
-      <button class="maya-btn-ghost w-full visit-del" onclick="closeDrawer();delBudget('${b.id}')">Excluir</button>
+      <button class="maya-btn-ghost w-full" ${onThen('closeDrawer()', 'dupBudget', b.id)}>Duplicar</button>
+      <button class="maya-btn-ghost w-full visit-del" ${onThen('closeDrawer()', 'delBudget', b.id)}>Excluir</button>
       <button class="maya-btn-ghost w-full" onclick="closeDrawer()">Fechar</button>
     </div>`);
 };
@@ -944,7 +958,7 @@ function viewClientsLegacy(){
   return `<div class="flex items-center gap-2 mb-3 anim-in"><h1 class="text-2xl font-black">Clientes (${cs.length})</h1><div class="flex-1"></div><button class="maya-btn text-sm" onclick="addClient()">+ Novo cliente</button></div>
   <div class="grid md:grid-cols-2 gap-3">${cs.map(c=>{ const n=(Store.budgets||[]).filter(b=>b.client?.name===c.name); const tot=n.reduce((s,b)=>s+Number(b.total||0),0);
     return `<div class="maya-card p-4 anim-in" style="opacity:1"><b>${esc(c.name)}</b><div class="text-sm text-gray-600">${esc(c.phone||'')} • ${esc(c.address||'')}</div><div class="text-xs mt-1">${n.length} orçamento(s) • ${brl(tot)}</div>
-    <div class="flex gap-1 mt-2 text-xs"><button class="maya-btn-ghost px-2 py-1" onclick="editClient('${c.id}')">Editar</button><button class="maya-btn-ghost px-2 py-1" onclick="newForClient('${c.id}')">+ Orçamento</button><button class="maya-btn-ghost px-2 py-1 !text-red-700" onclick="delClient('${c.id}')">Excluir</button></div></div>`;}).join('')||'<p class="text-gray-600">Nenhum cliente. Salve pelo editor ou adicione.</p>'}</div>`;
+    <div class="flex gap-1 mt-2 text-xs"><button class="maya-btn-ghost px-2 py-1" ${onCall('editClient', c.id)}>Editar</button><button class="maya-btn-ghost px-2 py-1" ${onCall('newForClient', c.id)}>+ Orçamento</button><button class="maya-btn-ghost px-2 py-1 !text-red-700" ${onCall('delClient', c.id)}>Excluir</button></div></div>`;}).join('')||'<p class="text-gray-600">Nenhum cliente. Salve pelo editor ou adicione.</p>'}</div>`;
 }
 window.addClient = ()=>{ openModal('Novo cliente', MF.text('mc-name','Nome *','')+`<div class="f-row2">`+MF.text('mc-phone','WhatsApp','','249...')+MF.text('mc-addr','Endereço','','Bairro, Petrópolis')+`</div>`, ()=>{
     const name=mv('mc-name'); if(!name) return 'Informe o nome do cliente.';
@@ -971,7 +985,7 @@ function viewCatalog(){
   });
   const grouped={}; items.forEach(c=>{ (grouped[c.cat]=grouped[c.cat]||[]).push(c); });
   const packs=Store.packages||[];
-  const pill=(id,label,n)=>`<button type="button" class="cat-pill${catF===id?' on':''}" onclick='setCatFilter(${JSON.stringify(id)})'>${esc(label)}${n!=null?` <span>${n}</span>`:''}</button>`;
+  const pill=(id,label,n)=>`<button type="button" class="cat-pill${catF===id?' on':''}" ${onCall('setCatFilter', id)}>${esc(label)}${n!=null?` <span>${n}</span>`:''}</button>`;
   return `<div class="cat-head anim-in">
     <h1 class="text-2xl font-black">Catálogo</h1>
     <button class="maya-btn text-sm" onclick="addCat()">+ Item</button>
@@ -982,10 +996,10 @@ function viewCatalog(){
   <div class="cat-pills">${pill('','Todos',all.length)}${cats.map(c=>pill(c,c,all.filter(x=>x.cat===c).length)).join('')}</div>
   <div class="maya-card p-3 mb-3 anim-in">
     <div class="font-extrabold mb-2" style="color:var(--maya-accent)">Pacotes prontos</div>
-    ${packs.length?packs.map(p=>`<div class="cat-row pack-row"><div class="info"><b>${esc(p.name)}</b><div class="meta">${esc(p.desc||'')} • ${pl(p.items.length,'item','itens')}</div></div><div class="price">${brl(packTotal(p))}</div><div class="acts"><button class="maya-btn-ghost" onclick="editPackage('${p.id}')">Editar</button><button class="maya-btn-ghost visit-del" onclick="delPackage('${p.id}')">Apagar</button></div></div>`).join(''):'<p class="text-sm" style="color:var(--muted)">Nenhum pacote ainda. Monte um conjunto de serviços para inserir no orçamento de uma vez.</p>'}
+    ${packs.length?packs.map(p=>`<div class="cat-row pack-row"><div class="info"><b>${esc(p.name)}</b><div class="meta">${esc(p.desc||'')} • ${pl(p.items.length,'item','itens')}</div></div><div class="price">${brl(packTotal(p))}</div><div class="acts"><button class="maya-btn-ghost" ${onCall('editPackage', p.id)}>Editar</button><button class="maya-btn-ghost visit-del" ${onCall('delPackage', p.id)}>Apagar</button></div></div>`).join(''):'<p class="text-sm" style="color:var(--muted)">Nenhum pacote ainda. Monte um conjunto de serviços para inserir no orçamento de uma vez.</p>'}
   </div>
   ${Object.keys(grouped).length?Object.entries(grouped).map(([cat,list])=>`<div class="maya-card p-3 mb-3 anim-in"><div class="font-extrabold mb-1" style="color:var(--maya-accent)">${esc(cat)} <span class="text-xs font-bold" style="color:var(--muted)">${pl(list.length,'serviço','serviços')}</span></div>
-    ${list.map(c=>`<button type="button" class="cat-row cat-item" onclick="editCat('${c.id}')"><div class="info"><b>${esc(c.name)}</b><div class="meta">${esc(c.desc||'—')} • ${esc(c.unit||'un')}</div></div><div class="price">${brl(c.price)}</div></button>`).join('')}
+    ${list.map(c=>`<button type="button" class="cat-row cat-item" ${onCall('editCat', c.id)}><div class="info"><b>${esc(c.name)}</b><div class="meta">${esc(c.desc||'—')} • ${esc(c.unit||'un')}</div></div><div class="price">${brl(c.price)}</div></button>`).join('')}
   </div>`).join(''):emptyState('Nenhum serviço','Nada encontrado nesta busca.','+ Novo item','addCat()')}
   <p class="text-xs mt-2 mb-4" style="color:var(--muted)"><button type="button" class="maya-btn-ghost text-xs" onclick="resetCat()">Restaurar catálogo padrão</button></p>`;
 }
@@ -1020,7 +1034,7 @@ window.addCat=()=>{ openModal('Novo serviço', catForm(null), ()=>{
   }); };
 window.editCat=id=>{
   const a=Store.catalog, c=a.find(x=>x.id===id); if(!c) return;
-  openModal('Editar serviço', catForm(c)+`<button type="button" class="maya-btn-ghost w-full mt-2 visit-del" onclick="closeModal();delCat('${c.id}')">Apagar serviço</button>`, ()=>{
+  openModal('Editar serviço', catForm(c)+`<button type="button" class="maya-btn-ghost w-full mt-2 visit-del" ${onThen('closeModal()', 'delCat', c.id)}>Apagar serviço</button>`, ()=>{
     const row=catFromForm(c); if(typeof row==='string') return row;
     Object.assign(c,row); Store.catalog=a; render(); toast('Serviço atualizado!'); return true;
   });
@@ -1032,7 +1046,7 @@ function viewAgendaLegacy(){
   const vs=[...(Store.visits||[])].sort((a,b)=>String(a.date).localeCompare(String(b.date)));
   return `<div class="flex items-center gap-2 mb-3 anim-in"><h1 class="text-2xl font-black">Agenda / Visitas</h1><div class="flex-1"></div><button class="maya-btn text-sm" onclick="addVisit()">+ Agendar</button></div>
   <div class="grid md:grid-cols-2 gap-3">${vs.map(v=>`<div class="maya-card p-4 anim-in" style="opacity:1"><b>${fmtDate(v.date)} ${esc(v.time||'')}</b> — ${esc(v.client)}<div class="text-sm text-gray-600">${esc(v.service)} • ${v.price?brl(v.price):''} • ${esc(v.status||'agendada')}</div>
-  <div class="flex gap-1 mt-2 text-xs"><button class="maya-btn-ghost px-2 py-1" onclick="toggleVisit('${v.id}')">✓ concluir</button><button class="maya-btn-ghost px-2 py-1 !text-red-700" onclick="delVisit('${v.id}')">Excluir</button></div></div>`).join('')||'<p class="text-gray-600">Nenhuma visita. Agende avaliação, manutenção, replantio…</p>'}</div>`;
+  <div class="flex gap-1 mt-2 text-xs"><button class="maya-btn-ghost px-2 py-1" ${onCall('toggleVisit', v.id)}>✓ concluir</button><button class="maya-btn-ghost px-2 py-1 !text-red-700" ${onCall('delVisit', v.id)}>Excluir</button></div></div>`).join('')||'<p class="text-gray-600">Nenhuma visita. Agende avaliação, manutenção, replantio…</p>'}</div>`;
 }
 window.addVisit=()=>{ openModal('Agendar visita', MF.text('av-client','Cliente *','','Nome do cliente')+`<div class="f-row2">`+MF.date('av-date','Data',todayISO())+MF.time('av-time','Hora','09:00')+`</div>`+MF.text('av-service','Serviço','Visita avaliação')+MF.num('av-price','Valor previsto R$',0), ()=>{
     const client=mv('av-client'); if(!client) return 'Informe o cliente.';
