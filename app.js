@@ -61,8 +61,8 @@ function blankBudget(){
     status:'pendente', client:{name:'',phone:'',address:''},
     items:[{desc:'',qty:1,unitLabel:'un',unit:0}],
     // compat: usamos it.unit como valor; unitPrice espelho
-    discount:0, discountType:'pct', discountVal:0, subtotal:0, displacement:Number(st.displacementDefault||0),
-    signalPct:Number(st.signalPct||50), payment:'Pix', payMethod:'Pix', payParcels:1, notes:'', serviceText:'', serviceValue:0, quoteMode:'livre', photos:[], paid:{entries:[]}, createdAt:new Date().toISOString()
+    discount:0, discountType:'pct', discountVal:0, subtotal:0, displacement:0,
+    signalPct:0, payment:'Pix', payMethod:'Pix', payParcels:1, notes:'', serviceText:'', serviceValue:0, quoteMode:'livre', photos:[], paid:{entries:[]}, createdAt:new Date().toISOString()
   };
 }
 // normaliza item antigo (unit vs unitPrice)
@@ -292,20 +292,6 @@ function viewEditor(isEdit){
         <select id="f-clientpick" class="maya-select" onchange="pickClient(this.value)"><option value="">Puxar cliente salvo…</option>${(Store.clients||[]).map(c=>`<option value="${c.id}">${esc(c.name)} — ${esc(c.phone||'')}</option>`).join('')}</select>
         <button class="maya-btn-ghost text-sm" onclick="saveClientFromDraft()">+ salvar cliente</button>
       </div>
-      <div class="grid grid-cols-3 gap-2 mt-3">
-        <label class="text-xs font-bold">Emissão<input type="date" id="f-date" class="maya-input" value="${esc(d.date)}"></label>
-        <label class="text-xs font-bold">Validade<input type="date" id="f-valid" class="maya-input" value="${esc(d.validity)}"></label>
-        <label class="text-xs font-bold">Status<select id="f-status" class="maya-select">${statusOpts(d.status)}</select></label>
-      </div>
-      <div class="grid grid-cols-2 gap-2 mt-2">
-        <label class="text-xs font-bold">Pagamento<select id="f-paymethod" class="maya-select" onchange="toggleParcels()">${['Pix','Dinheiro','Cartão de crédito','Cartão de débito','Transferência','Boleto'].concat((d.payMethod&&!['Pix','Dinheiro','Cartão de crédito','Cartão de débito','Transferência','Boleto'].includes(d.payMethod))?[d.payMethod]:[]).map(m=>`<option ${d.payMethod===m||(!d.payMethod&&d.payment===m)?'selected':''}>${m}</option>`).join('')}</select></label>
-        <label class="text-xs font-bold" id="f-parcelsbox">Parcelas (crédito)<input type="number" id="f-parcels" min="1" max="21" class="maya-input" value="${esc(d.payParcels||1)}"></label>
-      </div>
-      <div class="text-xs mt-1 font-bold" id="t-parcinfo" style="color:var(--maya-accent)"></div>
-      <div class="grid grid-cols-2 gap-2 mt-2">
-        <label class="text-xs font-bold">Sinal %<input type="number" id="f-signal" class="maya-input" value="${esc(d.signalPct)}"></label>
-      </div>
-      <details class="extra-fold mt-2"><summary>Observações internas</summary><textarea id="f-notes" class="maya-textarea mt-2" rows="2" placeholder="Só para vocês. Não sai no PDF.">${esc(d.notes)}</textarea></details>
     </div>
 
     <div class="maya-card p-4 anim-in" id="quote-mode-card">
@@ -334,25 +320,42 @@ function viewEditor(isEdit){
         <div id="items"></div>
       </div>
 
-      <div class="grid grid-cols-3 gap-2 mt-3 text-sm">
-        <label class="font-bold">Desconto<input type="number" id="f-desc" class="maya-input" value="${esc(d.discount)}"></label>
-        <label class="font-bold">Tipo<select id="f-desct" class="maya-select"><option value="pct" ${d.discountType==='pct'?'selected':''}>% porc.</option><option value="vlr" ${d.discountType==='vlr'?'selected':''}>R$ valor</option></select></label>
-        <label class="font-bold">Deslocamento R$<input type="number" id="f-desloc" class="maya-input" value="${esc(d.displacement)}"></label>
-      </div>
       <div class="mt-3 text-right">
-        <div class="text-sm">Subtotal: <b id="t-sub">—</b></div>
-        <div class="text-sm">Desconto: <b id="t-desc">—</b></div>
         <div class="text-xl font-black text-[#1A5D1A]">Total: <span id="t-tot">—</span></div>
-        <div class="text-xs text-gray-600" id="t-signal"></div>
+        <div class="text-xs" id="t-subline" style="color:var(--muted)"></div>
+        <div class="text-xs" id="t-signal" style="color:var(--muted)"></div>
         <div class="text-xs font-bold" id="t-alert"></div>
+        <div class="hidden"><b id="t-sub"></b><b id="t-desc"></b></div>
       </div>
-    </div>
-  </div>
 
-  <div class="maya-card p-4 mt-3 anim-in">
-    <div class="flex items-center gap-2 mb-1"><h2 class="sec-title">Recebimentos</h2><div class="flex-1"></div>
-    <button class="maya-btn text-xs" onclick="addPayment()">+ Registrar</button></div>
-    <div id="paidbox"></div>
+      <details class="more-opts mt-3" ${isEdit && (Number(d.signalPct)>0 || Number(d.discount)>0 || Number(d.displacement)>0 || (d.paid&&d.paid.entries&&d.paid.entries.length) || String(d.notes||'').trim() || (d.payMethod&&d.payMethod!=='Pix')) ? 'open' : ''}>
+        <summary>Mais opções</summary>
+        <div class="grid grid-cols-3 gap-2 mt-3 text-sm">
+          <label class="font-bold">Emissão<input type="date" id="f-date" class="maya-input" value="${esc(d.date)}"></label>
+          <label class="font-bold">Validade<input type="date" id="f-valid" class="maya-input" value="${esc(d.validity)}"></label>
+          <label class="font-bold">Status<select id="f-status" class="maya-select">${statusOpts(d.status)}</select></label>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
+          <label class="font-bold">Pagamento<select id="f-paymethod" class="maya-select" onchange="toggleParcels()">${['Pix','Dinheiro','Cartão de crédito','Cartão de débito','Transferência','Boleto'].concat((d.payMethod&&!['Pix','Dinheiro','Cartão de crédito','Cartão de débito','Transferência','Boleto'].includes(d.payMethod))?[d.payMethod]:[]).map(m=>`<option ${d.payMethod===m||(!d.payMethod&&d.payment===m)?'selected':''}>${m}</option>`).join('')}</select></label>
+          <label class="font-bold" id="f-parcelsbox">Parcelas (crédito)<input type="number" id="f-parcels" min="1" max="21" class="maya-input" value="${esc(d.payParcels||1)}"></label>
+        </div>
+        <div class="text-xs mt-1 font-bold" id="t-parcinfo" style="color:var(--maya-accent)"></div>
+        <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
+          <label class="font-bold">Sinal %<input type="number" id="f-signal" class="maya-input" value="${esc(d.signalPct||0)}" placeholder="0"></label>
+          <label class="font-bold">Deslocamento R$<input type="number" id="f-desloc" class="maya-input" value="${esc(d.displacement||0)}" placeholder="0"></label>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
+          <label class="font-bold">Desconto<input type="number" id="f-desc" class="maya-input" value="${esc(d.discount)}"></label>
+          <label class="font-bold">Tipo<select id="f-desct" class="maya-select"><option value="pct" ${d.discountType==='pct'?'selected':''}>% porc.</option><option value="vlr" ${d.discountType==='vlr'?'selected':''}>R$ valor</option></select></label>
+        </div>
+        <label class="text-xs font-bold block mt-2">Observações internas<textarea id="f-notes" class="maya-textarea" rows="2" placeholder="Só para vocês. Não sai no PDF.">${esc(d.notes)}</textarea></label>
+        <div class="mt-3 pt-2" style="border-top:1px solid var(--line)">
+          <div class="flex items-center gap-2 mb-1"><b>Recebimentos</b><div class="flex-1"></div>
+          <button class="maya-btn text-xs" onclick="addPayment()">+ Registrar</button></div>
+          <div id="paidbox"></div>
+        </div>
+      </details>
+    </div>
   </div>
 
   <div class="mt-3 anim-in">
@@ -482,6 +485,11 @@ function paintEditorTotalsOnly(){
   if(window.__lastTot!==undefined && window.__lastTot!==Draft.total && window.gsap && !navReduced()){ const tt=$('#t-tot'); if(tt) gsap.fromTo(tt,{scale:1.14},{scale:1,duration:.28,ease:'back.out(2)',clearProps:'transform'}); }
   window.__lastTot = Draft.total;
   const tot = Number(Draft.total)||0, sp = Number(Draft.signalPct)||0;
+  const bits=[];
+  if(Number(Draft.subtotal)>0) bits.push('Serviço '+brl(Draft.subtotal));
+  if(Number(Draft.discountVal)>0) bits.push('desc. -'+brl(Draft.discountVal));
+  if(Number(Draft.displacement)>0) bits.push('desloc. '+brl(Draft.displacement));
+  const sl=$('#t-subline'); if(sl) sl.textContent = bits.join(' • ');
   const e=$('#t-signal'); if(e) e.textContent = sp? `Sinal ${sp}%: ${brl(tot*sp/100)} • Restante: ${brl(tot*(1-sp/100))}` : '';
   const pi=$('#t-parcinfo'); if(pi){ const n=Math.min(21,Math.max(1,Number(Draft.payParcels)||1));
     pi.textContent = (/crédito/i.test(Draft.payMethod||'')&&n>1&&tot>0) ? `${n}x de ${brl(tot/n)} no cartão` : ''; }
@@ -927,7 +935,7 @@ window.saveSettings=()=>{
   if(!window.MayaAuth?.canWrite?.()){ toast('Acesso somente para visualização.'); return; }
   const st=Store.settings;
   ['company','tagline','cnpj','email','whatsappDisplay','whatsappLink','instagram','address','pix','headerText','footerText','terms','zapTemplate','zapFollow'].forEach(k=>st[k]=$('#s-'+k).value);
-  st.validityDays=Number($('#s-validityDays').value||15); st.signalPct=Number($('#s-signalPct').value||50); st.displacementDefault=Number($('#s-displacementDefault').value||0);
+  st.validityDays=Number($('#s-validityDays').value||15); st.signalPct=Number($('#s-signalPct').value||0); st.displacementDefault=Number($('#s-displacementDefault').value||0);
   st.wmOpacity=Number($('#s-wmOpacity').value||0.09); st.wmSizePct=Number($('#s-wmSizePct').value||60); st.wmEnabled=$('#s-wmEnabled').value==='1';
   Store.settings=st; toast('Empresa salva!'); render();
 };

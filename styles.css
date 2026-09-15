@@ -360,3 +360,9 @@ body.maya-readonly main button[disabled]{opacity:.55;cursor:not-allowed}
   #preview-wrap{display:block!important}
   .editor-sticky{display:none}
 }
+
+.more-opts{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:.2rem .8rem .8rem;background:#0E160F}
+.more-opts>summary{cursor:pointer;font-weight:800;font-size:.95rem;color:var(--maya-accent);min-height:46px;display:flex;align-items:center;list-style:none}
+.more-opts>summary::-webkit-details-marker{display:none}
+.more-opts>summary::after{content:"▾";margin-left:auto;opacity:.7}
+.more-opts[open]>summary::after{content:"▴"}

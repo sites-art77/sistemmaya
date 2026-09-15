@@ -30,7 +30,7 @@ const defaultSettings = {
   zapTemplate: 'Olá {nome}! Aqui é {empresa} Orçamento Nº {numero}: {total} válido até {validade}. Segue PDF em anexo.',
   zapFollow: 'Olá {nome}! Aqui é {empresa}. O orçamento Nº {numero} ({total}) segue em aberto há {dias} dias. Posso ajudar com alguma dúvida?',
   validityDays: 15,
-  signalPct: 50,
+  signalPct: 0,
   displacementDefault: 60,
   headerText: 'Orçamento profissional — válido mediante aprovação no prazo.',
   footerText: 'Obrigado pela preferência! MAYA Garden — jardins vivos em Petrópolis.',
