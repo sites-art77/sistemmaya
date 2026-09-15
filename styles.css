@@ -340,3 +340,8 @@ body.maya-readonly main button[disabled]{opacity:.55;cursor:not-allowed}
 
 .free-scope{min-height:160px;line-height:1.45;resize:vertical}
 @media (max-width:700px){.free-scope{min-height:200px}}
+
+.quote-mode{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#0d150f;border:1px solid #294632;border-radius:12px;padding:4px}
+.quote-mode-btn{min-height:44px;border:0;border-radius:10px;background:transparent;color:#b8dfbd;font:800 .9rem/1 Inter,system-ui,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.quote-mode-btn.on{background:#1f7a2b;color:#fff;box-shadow:0 6px 16px rgba(31,122,43,.28)}
+#livre-panel[hidden],#items-panel[hidden]{display:none!important}

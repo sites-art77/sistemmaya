@@ -45,7 +45,10 @@ function recalcDraft(){
   Draft.displacement = Math.max(0, Number(Draft.displacement)||0);
   Draft.signalPct = Math.min(100, Math.max(0, Number(Draft.signalPct)||0));
   Draft.serviceValue = Math.max(0, Number(Draft.serviceValue)||0);
-  Draft.subtotal = (Draft.items||[]).reduce((s,it)=>s+(Number(it.qty)||0)*(Number(it.unit)||0),0) + Draft.serviceValue;
+  const livre = (Draft.quoteMode||'livre')==='livre';
+  const itemSum = livre ? 0 : (Draft.items||[]).reduce((s,it)=>s+(Number(it.qty)||0)*(Number(it.unit)||0),0);
+  const freeVal = livre ? Draft.serviceValue : 0;
+  Draft.subtotal = itemSum + freeVal;
   const d = Number(Draft.discount||0);
   Draft.discountVal = Draft.discountType==='pct' ? Draft.subtotal*d/100 : d;
   Draft.total = Math.max(0, Draft.subtotal - Draft.discountVal + (Number(Draft.displacement)||0));
@@ -59,7 +62,7 @@ function blankBudget(){
     items:[{desc:'',qty:1,unitLabel:'un',unit:0}],
     // compat: usamos it.unit como valor; unitPrice espelho
     discount:0, discountType:'pct', discountVal:0, subtotal:0, displacement:Number(st.displacementDefault||0),
-    signalPct:Number(st.signalPct||50), payment:'Pix', payMethod:'Pix', payParcels:1, notes:'', serviceText:'', serviceValue:0, photos:[], paid:{entries:[]}, createdAt:new Date().toISOString()
+    signalPct:Number(st.signalPct||50), payment:'Pix', payMethod:'Pix', payParcels:1, notes:'', serviceText:'', serviceValue:0, quoteMode:'livre', photos:[], paid:{entries:[]}, createdAt:new Date().toISOString()
   };
 }
 // normaliza item antigo (unit vs unitPrice)
@@ -71,6 +74,10 @@ function normItems(b){
   if(!b.payParcels) b.payParcels=1;
   if(b.serviceText==null) b.serviceText='';
   b.serviceValue=Math.max(0, Number(b.serviceValue)||0);
+  if(b.quoteMode!=='livre' && b.quoteMode!=='itens'){
+    const hasItems=(b.items||[]).some(it=>String(it.desc||'').trim() && Number(it.unit)>0);
+    b.quoteMode = (hasItems && !String(b.serviceText||'').trim()) ? 'itens' : 'livre';
+  }
   return b;
 }
 function payLabel(b){ const m=(b&&b.payMethod)||(b&&b.payment)||'Pix'; const n=Math.min(21,Math.max(1,Number((b&&b.payParcels)||1)));
@@ -250,7 +257,7 @@ function viewDashboardLegacy(){
 }
 function afterRender(r){
   if(r==='#/'||r===''){ sweepExpired(); if(window.dashAfter) dashAfter(); }
-  if(r.startsWith('#/novo')||r.startsWith('#/editar')){ recalcDraft(); window.__lastTot = Draft.total; paintEditorTotals(); paintPreview(); applyWmVars(); paintPhotos(); paintPaid(); toggleParcels(); }
+  if(r.startsWith('#/novo')||r.startsWith('#/editar')){ recalcDraft(); window.__lastTot = Draft.total; paintEditorTotals(); paintPreview(); applyWmVars(); paintPhotos(); paintPaid(); toggleParcels(); applyQuoteMode(); }
   if(r.startsWith('#/orcamentos') && window.renderList){ try{ renderList(); }catch(e){ console.warn(e); } }
   if(r.startsWith('#/relatorios') && window.repAfter){ try{ repAfter(); }catch(e){} }
 }
@@ -301,25 +308,40 @@ function viewEditor(isEdit){
       <label class="text-xs font-bold block mt-2">Observações internas<textarea id="f-notes" class="maya-textarea" rows="2" placeholder="Só para vocês. Não substitui a descrição do serviço.">${esc(d.notes)}</textarea></label>
     </div>
 
-    <div class="maya-card p-4 anim-in">
-      <div class="budget-items-head mb-3"><h2 class="font-extrabold">2. Itens (livres)</h2>
-        <div class="budget-items-actions" role="group" aria-label="Adicionar itens ao orçamento">
-          <button class="maya-btn-ghost text-sm" onclick="openPackPick()">Pacote</button>
-          <button class="maya-btn-ghost text-sm" onclick="openCatalogPick()">+ do catálogo</button>
-          <button class="maya-btn text-sm" onclick="addItem()">+ item livre</button>
+    <div class="maya-card p-4 anim-in" id="quote-mode-card">
+      <div class="quote-mode" role="tablist" aria-label="Modo do orçamento">
+        <button type="button" class="quote-mode-btn ${(d.quoteMode||'livre')==='livre'?'on':''}" data-mode="livre" onclick="setQuoteMode('livre')">Só texto</button>
+        <button type="button" class="quote-mode-btn ${d.quoteMode==='itens'?'on':''}" data-mode="itens" onclick="setQuoteMode('itens')">Itens / catálogo</button>
+      </div>
+
+      <div id="livre-panel" ${(d.quoteMode||'livre')==='itens'?'hidden':''}>
+        <h2 class="font-extrabold mb-1 mt-3">2. Descreva o serviço</h2>
+        <p class="text-xs mb-2" style="color:var(--muted)">Escreva tudo do orçamento aqui. Sem catálogo, sem pacote. Esse texto sai no PDF.</p>
+        <textarea id="f-servicetext" class="maya-textarea free-scope" rows="10" placeholder="Ex: Limpeza completa do jardim, poda das cercas-vivas, capina dos canteiros, adubação e varrição. Material incluso. Execução em 1 dia.">${esc(d.serviceText||'')}</textarea>
+        <label class="text-xs font-bold block mt-2">Valor do serviço R$<input type="number" step="any" id="f-servicevalue" class="maya-input" value="${esc(d.serviceValue||0)}" placeholder="0"></label>
+        <div class="price-tip p-3 mt-3">
+          <div class="font-extrabold">Dica de quanto cobrar</div>
+          <p class="text-xs mb-2" style="color:var(--muted)">3 toques: serviço → tamanho → padrão.</p>
+          <button class="maya-btn mt-1 text-sm w-full" onclick="openCalc(null)">Quanto cobrar?</button>
+          <div id="tip-last" class="text-xs mt-1 text-gray-700"></div>
         </div>
       </div>
-      <div id="items"></div>
+
+      <div id="items-panel" ${(d.quoteMode||'livre')==='livre'?'hidden':''}>
+        <div class="budget-items-head mb-3 mt-3"><h2 class="font-extrabold">2. Itens</h2>
+          <div class="budget-items-actions" role="group" aria-label="Adicionar itens ao orçamento">
+            <button class="maya-btn-ghost text-sm" onclick="openPackPick()">Pacote</button>
+            <button class="maya-btn-ghost text-sm" onclick="openCatalogPick()">+ do catálogo</button>
+            <button class="maya-btn text-sm" onclick="addItem()">+ item livre</button>
+          </div>
+        </div>
+        <div id="items"></div>
+      </div>
+
       <div class="grid grid-cols-3 gap-2 mt-3 text-sm">
         <label class="font-bold">Desconto<input type="number" id="f-desc" class="maya-input" value="${esc(d.discount)}"></label>
         <label class="font-bold">Tipo<select id="f-desct" class="maya-select"><option value="pct" ${d.discountType==='pct'?'selected':''}>% porc.</option><option value="vlr" ${d.discountType==='vlr'?'selected':''}>R$ valor</option></select></label>
         <label class="font-bold">Deslocamento R$<input type="number" id="f-desloc" class="maya-input" value="${esc(d.displacement)}"></label>
-      </div>
-      <div class="price-tip p-3 mt-3">
-        <div class="font-extrabold">Dica de quanto cobrar</div>
-        <p class="text-xs mb-2" style="color:var(--muted)">3 toques: serviço → tamanho → padrão. Profissional e rápido.</p>
-        <button class="maya-btn mt-1 text-sm w-full" onclick="openCalc(null)">Quanto cobrar?</button>
-        <div id="tip-last" class="text-xs mt-1 text-gray-700"></div>
       </div>
       <div class="mt-3 text-right">
         <div class="text-sm">Subtotal: <b id="t-sub">—</b></div>
@@ -329,13 +351,6 @@ function viewEditor(isEdit){
         <div class="text-xs font-bold" id="t-alert"></div>
       </div>
     </div>
-  </div>
-
-  <div class="maya-card p-4 mt-3 anim-in">
-    <h2 class="font-extrabold mb-1">Descrição livre do orçamento</h2>
-    <p class="text-xs mb-2" style="color:var(--muted)">Escreva o serviço inteiro aqui, do seu jeito. Não precisa usar catálogo nem pacotes. Esse texto sai no PDF.</p>
-    <textarea id="f-servicetext" class="maya-textarea free-scope" rows="8" placeholder="Ex: Limpeza completa do jardim, poda das cercas-vivas, capina dos canteiros, adubação e varrição. Material incluso. Execução em 1 dia.">${esc(d.serviceText||'')}</textarea>
-    <label class="text-xs font-bold block mt-2">Valor deste serviço R$<input type="number" step="any" id="f-servicevalue" class="maya-input" value="${esc(d.serviceValue||0)}" placeholder="0"></label>
   </div>
 
   <div class="grid lg:grid-cols-2 gap-3 mt-3">
@@ -383,9 +398,32 @@ function itemRow(it, i){
 }
 function paintItems(){
   const box = $('#items'); if(!box||!Draft) return;
-  // preserva foco: só re-renderiza em mudanças estruturais (chamadores controlam)
   box.innerHTML = (Draft.items||[]).map(itemRow).join('') || '<p class="text-sm text-gray-500">Sem itens. Adicione.</p>';
 }
+function applyQuoteMode(){
+  if(!Draft) return;
+  const livre = (Draft.quoteMode||'livre')==='livre';
+  const lp = document.getElementById('livre-panel');
+  const ip = document.getElementById('items-panel');
+  if(lp) lp.hidden = !livre;
+  if(ip) ip.hidden = livre;
+  document.querySelectorAll('.quote-mode-btn').forEach(function(b){
+    const on = b.getAttribute('data-mode') === (livre?'livre':'itens');
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+}
+window.setQuoteMode = function(m){
+  if(!Draft) return;
+  collectSilent();
+  Draft.quoteMode = m==='itens' ? 'itens' : 'livre';
+  window._dirty = true;
+  applyQuoteMode();
+  if(Draft.quoteMode==='itens') paintItems();
+  recalcDraft();
+  paintEditorTotalsOnly();
+  paintPreviewOnly();
+};
 window.editItem = (i,f,v)=>{
   if(!Draft?.items[i]) return;
   Draft.items[i][f]=v; window._dirty=true;
@@ -516,8 +554,7 @@ function paintPreviewOnly(){
     </div>
     <div class="pp-client"><b>Cliente:</b> ${esc(Draft.client.name||'-')} &nbsp;•&nbsp; ${esc(Draft.client.phone||'-')} &nbsp;•&nbsp; ${esc(Draft.client.address||'-')}</div>
     ${String(Draft.serviceText||'').trim()?`<div class="text-sm mt-2" style="white-space:pre-wrap;color:#222"><b>Escopo do serviço</b><br>${esc(Draft.serviceText)}</div>`:''}
-    ${Number(Draft.serviceValue)>0?`<div class="text-sm mt-1">Serviço (texto livre): <b>${brl(Draft.serviceValue)}</b></div>`:''}
-    ${(Draft.items||[]).some(it=>String(it.desc||'').trim()||Number(it.unit)>0)?`<table class="table-maya"><tr><th>Descrição</th><th>Qtd</th><th>Unit</th><th>Total</th></tr>
+    ${(Draft.quoteMode||'livre')!=='livre' && (Draft.items||[]).some(it=>String(it.desc||'').trim()||Number(it.unit)>0)?`<table class="table-maya"><tr><th>Descrição</th><th>Qtd</th><th>Unit</th><th>Total</th></tr>
     ${(Draft.items||[]).filter(it=>String(it.desc||'').trim()||Number(it.unit)>0).map(it=>`<tr><td>${esc(it.desc||'-')}</td><td>${esc(it.qty)} ${esc(it.unitLabel||'')}</td><td>${brl(it.unit)}</td><td class="font-bold">${brl((Number(it.qty)||0)*(Number(it.unit)||0))}</td></tr>`).join('')}</table>`:''}
     ${Number(Draft.displacement)>0?`<div class="text-xs mt-2 text-right" style="color:#555">Taxa de deslocamento: ${brl(Draft.displacement)}</div>`:''}
     <div class="pp-totalbox"><span class="text-sm" style="color:#1A5D1A">VALOR TOTAL&nbsp;&nbsp;</span><span class="pp-total">${brl(Draft.total)}</span></div>
@@ -759,6 +796,15 @@ window.calcNow = ()=>{
 };
 window.applyTip = v=>{
   v = Number(v)||0;
+  if((Draft.quoteMode||'livre')==='livre' && (CalcSel===null || CalcSel===undefined)){
+    Draft.serviceValue = v;
+    const inp = document.getElementById('f-servicevalue');
+    if(inp) inp.value = v;
+    window._dirty=true;
+    closeDrawer(); recalcDraft(); paintEditorTotals(); paintPreview();
+    toast('Valor '+brl(v)+' aplicado no serviço');
+    return;
+  }
   if(CalcSel!==null && Draft?.items[CalcSel]){
     // vindo de um item: troca SOMENTE o valor, sem alterar a descrição
     const it = Draft.items[CalcSel]; const q = Number(it.qty)||1;

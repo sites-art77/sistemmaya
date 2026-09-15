@@ -232,7 +232,7 @@ window.billContract=id=>{ const a=Store.contracts, c=a.find(x=>x.id===id); if(!c
   b.notes='Cobrança de contrato de manutenção recorrente.'; b.contractId=c.id; recalcDraft2(b);
   const all=Store.budgets; all.push(b); Store.budgets=all; c.lastBilled=t; Store.contracts=a;
   toast(`Cobrança ${b.number} gerada!`); render(); };
-function recalcDraft2(b){ b.serviceValue=Math.max(0,Number(b.serviceValue)||0); b.subtotal=(b.items||[]).reduce((s,it)=>s+(Number(it.qty)||0)*(Number(it.unit)||0),0)+b.serviceValue; b.discountVal=b.discountType==='pct'?b.subtotal*Number(b.discount||0)/100:Number(b.discount||0); b.total=Math.max(0,b.subtotal-b.discountVal+Number(b.displacement||0)); }
+function recalcDraft2(b){ b.serviceValue=Math.max(0,Number(b.serviceValue)||0); const livre=(b.quoteMode||'livre')==='livre'; const itemSum=livre?0:(b.items||[]).reduce((s,it)=>s+(Number(it.qty)||0)*(Number(it.unit)||0),0); b.subtotal=itemSum+(livre?b.serviceValue:0); b.discountVal=b.discountType==='pct'?b.subtotal*Number(b.discount||0)/100:Number(b.discount||0); b.total=Math.max(0,b.subtotal-b.discountVal+Number(b.displacement||0)); }
 
 /* ---------- RELATÓRIOS ---------- */
 function repSeen(){ try{ return localStorage.getItem('maya_rep_seen')==='1'; }catch(e){ return false; } }

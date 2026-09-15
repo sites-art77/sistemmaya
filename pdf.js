@@ -117,7 +117,8 @@ async function gerarPDF(budget){
   printFreeText('Escopo do serviço', budget.serviceText);
 
   // tabela itens (pula linhas vazias)
-  const priced = (budget.items||[]).filter(it=>String(it.desc||'').trim() || Number(it.unit)>0);
+  const livreMode = (budget.quoteMode||'livre')==='livre';
+  const priced = livreMode ? [] : (budget.items||[]).filter(it=>String(it.desc||'').trim() || Number(it.unit)>0);
   const colX = [M, M+108, M+128, M+152];
   function tableHead(yy){
     doc.setFillColor(26,93,26); doc.rect(M,yy,W-2*M,8,'F');
