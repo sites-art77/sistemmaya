@@ -159,77 +159,31 @@
     return 'Segue o orçamento em PDF da MAYA Garden.';
   }
 
-  function phoneDigits(raw) {
-    let d = String(raw || '').replace(/\D/g, '');
-    if (d && d.length <= 11 && !d.startsWith('55')) d = '55' + d;
-    return d;
-  }
-
-  function clientName() {
-    return (state.budget && state.budget.client && state.budget.client.name) || 'cliente';
-  }
-
-  function currentPhoneRaw() {
-    const typed = document.getElementById('pdf-ready-phone');
-    if (typed && typed.value.trim()) return typed.value.trim();
-    return (state.budget && state.budget.client && state.budget.client.phone) || '';
-  }
-
-  function rememberPhone(raw) {
-    if (!state.budget) state.budget = { client: {} };
-    if (!state.budget.client) state.budget.client = {};
-    state.budget.client.phone = raw;
-    const inp = document.getElementById('f-phone');
-    if (inp) inp.value = raw;
-  }
-
-  function openClientChat(msg) {
-    const d = phoneDigits(currentPhoneRaw());
-    if (!d) return false;
-    window.open('https://wa.me/' + d + '?text=' + encodeURIComponent(msg || ''), '_blank');
-    return true;
-  }
-
-  function showAttachStep() {
-    const root = document.getElementById('pdf-ready-root');
-    if (!root) return;
-    const name = escapeHtml(clientName());
-    const body = root.querySelector('#pdf-ready-step');
-    if (!body) return;
-    body.innerHTML = `
-      <h2 id="pdf-ready-title">Agora anexe o PDF</h2>
-      <p class="pdf-ready-sub">A conversa de <b>${name}</b> já está no WhatsApp, com a mensagem pronta. Volte lá, toque no clipe e envie o arquivo.</p>
-      <button type="button" class="pdf-ready-primary" id="pdf-ready-attach">Anexar PDF</button>
-      <a class="pdf-ready-secondary pdf-ready-full" id="pdf-ready-download2" href="${ensureUrl()}" download="${escapeHtml(asciiFileName(state.filename))}">Baixar PDF</a>
-      <p class="pdf-ready-tip">Se o WhatsApp não abrir o arquivo, baixe e anexe pelo clipe na mesma conversa.</p>
-      <button type="button" class="pdf-ready-close" id="pdf-ready-close2">Fechar</button>
-    `;
-    body.querySelector('#pdf-ready-attach').addEventListener('click', sharePdf);
-    body.querySelector('#pdf-ready-download2').addEventListener('click', function (ev) {
-      ev.preventDefault();
-      triggerDownload();
-    });
-    body.querySelector('#pdf-ready-close2').addEventListener('click', closePdfReady);
-  }
-
   async function shareWhatsApp() {
     if (!state.blob) return;
-    const raw = currentPhoneRaw();
-    if (!phoneDigits(raw)) {
-      toast('Coloque o WhatsApp do cliente.');
-      const typed = document.getElementById('pdf-ready-phone');
-      if (typed) typed.focus();
-      return;
-    }
-    rememberPhone(raw);
     const msg = quoteMessage();
     try { await navigator.clipboard.writeText(msg); } catch (_) {}
-    if (!openClientChat(msg)) {
-      toast('Não deu para abrir o WhatsApp deste número.');
+
+    try {
+      if (await shareFilesOnly()) {
+        toast('Envie só o PDF. A mensagem já foi copiada.');
+        return;
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      console.warn('Share WhatsApp falhou:', err);
+    }
+
+    const phone = state.budget && state.budget.client && state.budget.client.phone;
+    if (typeof window.openZapText === 'function' && phone) {
+      window.openZapText(phone, msg);
+      toast('WhatsApp aberto. Toque no clipe e anexe o PDF.');
+      triggerDownload();
       return;
     }
-    toast('Mensagem aberta para ' + clientName() + '. Agora anexe o PDF.');
-    showAttachStep();
+
+    triggerDownload();
+    toast('Baixe o PDF, abra o WhatsApp e anexe pelo clipe.');
   }
 
   function canShareFiles() {
@@ -258,11 +212,8 @@
 
     const url = ensureUrl();
     const shareOk = canShareFiles();
+    const ios = isIOS();
     const safeName = asciiFileName(state.filename);
-    const name = clientName();
-    const phone = (state.budget && state.budget.client && state.budget.client.phone) || '';
-    const msg = quoteMessage();
-    const sendLabel = name && name !== 'cliente' ? ('Enviar para ' + name) : 'Enviar no WhatsApp';
 
     const root = document.createElement('div');
     root.id = 'pdf-ready-root';
@@ -270,32 +221,35 @@
       <div class="pdf-ready-backdrop" role="presentation"></div>
       <section class="pdf-ready-sheet" role="dialog" aria-modal="true" aria-labelledby="pdf-ready-title">
         <div class="pdf-ready-handle" aria-hidden="true"></div>
-        <div id="pdf-ready-step">
         <div class="pdf-ready-icon" aria-hidden="true">OK</div>
         <h2 id="pdf-ready-title">PDF pronto</h2>
-        <p class="pdf-ready-sub">A mensagem personalizada abre direto no WhatsApp deste cliente. Depois você anexa o PDF.</p>
+        <p class="pdf-ready-sub">Toque em Enviar no WhatsApp ou Baixar PDF.</p>
         <div class="pdf-ready-file" title="${escapeHtml(safeName)}">
           <span aria-hidden="true">PDF</span>
           <strong>${escapeHtml(safeName)}</strong>
         </div>
-        <div class="pdf-ready-to">
-          <label for="pdf-ready-phone">WhatsApp do cliente</label>
-          <input id="pdf-ready-phone" type="tel" inputmode="tel" value="${escapeHtml(phone)}" placeholder="(24) 99999-0000">
-        </div>
-        <div class="pdf-ready-msg">${escapeHtml(msg)}</div>
+
         <button type="button" class="pdf-ready-primary" id="pdf-ready-whatsapp">
-          <span>${escapeHtml(sendLabel)}</span>
+          <span>Enviar no WhatsApp</span>
         </button>
+
         <a class="pdf-ready-secondary pdf-ready-full" id="pdf-ready-download" href="${url}" download="${escapeHtml(safeName)}" target="_blank" rel="noopener">
-          <span>Só baixar PDF</span>
+          <span>Baixar PDF</span>
         </a>
+
         <div class="pdf-ready-grid">
           <button type="button" class="pdf-ready-secondary" id="pdf-ready-open">Abrir</button>
           <button type="button" class="pdf-ready-secondary" id="pdf-ready-share">Compartilhar</button>
         </div>
-        <p class="pdf-ready-tip">O WhatsApp não deixa o site anexar o arquivo sozinho. Primeiro abre a conversa com a mensagem; na hora seguinte você anexa o PDF.</p>
+
+        <p class="pdf-ready-tip">
+          ${ios
+            ? 'No iPhone: envie só o arquivo, sem legenda. Se o WhatsApp recusar, baixe o PDF e anexe pelo clipe.'
+            : isAndroid()
+              ? 'No Android: Enviar no WhatsApp abre a lista de apps. Ou baixe e anexe pelo clipe. O arquivo fica em Downloads.'
+              : 'O arquivo entra em Downloads. Depois você pode enviar no WhatsApp.'}
+        </p>
         <button type="button" class="pdf-ready-close" id="pdf-ready-close">Fechar</button>
-        </div>
       </section>
     `;
 
@@ -374,10 +328,6 @@
         padding:10px 12px;margin-bottom:13px;min-width:0;
       }
       .pdf-ready-file strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.8rem;color:#dbe9de}
-      .pdf-ready-to{text-align:left;margin:0 0 10px}
-      .pdf-ready-to label{display:block;font-size:.72rem;font-weight:800;color:#9bb5a0;margin-bottom:4px}
-      .pdf-ready-to input{width:100%;box-sizing:border-box;min-height:46px;border-radius:12px;border:1px solid #294632;background:#0d150f;color:#edf7ef;padding:0 12px;font:700 .95rem Inter,system-ui,sans-serif}
-      .pdf-ready-msg{text-align:left;background:#0d150f;border:1px solid #294632;border-radius:12px;padding:10px 12px;margin-bottom:12px;color:#c5d8c8;font-size:.8rem;line-height:1.4;max-height:5.6em;overflow:auto;white-space:pre-wrap}
       .pdf-ready-primary,.pdf-ready-secondary,.pdf-ready-close{
         font:800 .96rem/1 Inter,system-ui,sans-serif;cursor:pointer;
         -webkit-tap-highlight-color:transparent;text-decoration:none;
