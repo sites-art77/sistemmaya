@@ -17,7 +17,7 @@
   function loadSeen(){ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ return {}; } }
   function saveSeen(o){ try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){} }
   function dueVisits(){
-    return ((window.Store && Store.visits) || []).filter(v => v && v.status !== 'concluída' && daysUntil(v.date) === DAYS);
+    return ((window.Store && Store.visits) || []).filter(v => v && v.status !== 'concluída' && v.status !== 'cancelada' && daysUntil(v.date) === DAYS);
   }
   function line(v){
     return [v.client || 'Cliente', fmt(v.date), v.time || '', v.service || ''].filter(Boolean).join(' • ');

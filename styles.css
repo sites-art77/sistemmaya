@@ -404,3 +404,10 @@ body.maya-readonly main button[disabled]{opacity:.55;cursor:not-allowed}
 @media(min-width:1024px){
   .side{top:0;padding-top:calc(18px + env(safe-area-inset-top, 0px))}
 }
+.visit-card{border:1px solid var(--line);border-radius:14px;padding:.7rem;margin-bottom:.55rem}
+.visit-card.is-cancel{opacity:.72;border-color:#6e2a2a}
+.visit-card.is-done{opacity:.8}
+.visit-card .maya-badge{margin:.35rem 0 .2rem;display:inline-block}
+.visit-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.visit-actions button{min-height:40px;padding:.45rem .7rem;font-size:.8rem;font-weight:800}
+.visit-del,.visit-actions .visit-del{color:#FF9B9B;border-color:#6e2a2a}

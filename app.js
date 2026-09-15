@@ -164,7 +164,7 @@ function shell(active, html){
   const logo = esc(st.logoPath);
   const t = todayISO(), mk = t.slice(0,7);
   const nPend = (Store.budgets||[]).filter(b=>effStatus(b)==='pendente').length;
-  const nToday = (Store.visits||[]).filter(v=>v.date===t&&v.status!=='concluída').length;
+  const nToday = (Store.visits||[]).filter(v=>v.date===t&&v.status!=='concluída'&&v.status!=='cancelada').length;
   const nOS = (Store.os||[]).filter(o=>o.status==='aberta'||o.status==='em execução').length;
   const badges = {'#/orcamentos':nPend,'#/agenda':nToday,'#/os':nOS};
   const sysNav = window.MayaAuth?.isAdmin?.() ? [...NAV_SYS,['#/admin','Administração','⚙']] : NAV_SYS;
@@ -955,8 +955,21 @@ window.addVisit=()=>{ openModal('Agendar visita', MF.text('av-client','Cliente *
     const client=mv('av-client'); if(!client) return 'Informe o cliente.';
     const a=Store.visits; a.push({id:Store.uid(),client,date:mv('av-date')||todayISO(),time:mv('av-time'),service:mv('av-service'),price:numBR(mv('av-price')),status:'agendada'}); Store.visits=a; render(); toast('Visita agendada!'); if(window.MayaReminders) window.MayaReminders.afterVisitSaved(); return true;
   }); };
-window.toggleVisit=id=>{ const a=Store.visits; const v=a.find(x=>x.id===id); v.status=v.status==='concluída'?'agendada':'concluída'; Store.visits=a; render(); };
-window.delVisit=async id=>{ if(!await confirmModal('Excluir visita','Remover esta visita da agenda?'))return; Store.visits=Store.visits.filter(v=>v.id!==id); render(); };
+window.toggleVisit=id=>{ const a=Store.visits; const v=a.find(x=>x.id===id); if(!v) return; v.status=v.status==='concluída'?'agendada':'concluída'; Store.visits=a; render(); };
+window.cancelVisit=id=>{ const a=Store.visits; const v=a.find(x=>x.id===id); if(!v) return; v.status='cancelada'; Store.visits=a; render(); toast('Visita cancelada.'); };
+window.reopenVisit=id=>{ const a=Store.visits; const v=a.find(x=>x.id===id); if(!v) return; v.status='agendada'; Store.visits=a; render(); toast('Visita reativada.'); };
+window.delVisit=async id=>{
+  const v=(Store.visits||[]).find(x=>x.id===id);
+  const cancelada=v?.status==='cancelada';
+  if(!await confirmModal(cancelada?'Apagar visita cancelada':'Excluir visita', cancelada?'Esta visita está cancelada. Apagar de vez?':'Remover esta visita da agenda?')) return;
+  Store.visits=Store.visits.filter(x=>x.id!==id); render(); toast('Visita apagada.');
+};
+window.clearCancelledVisits=async ()=>{
+  const n=(Store.visits||[]).filter(v=>v.status==='cancelada').length;
+  if(!n){ toast('Não há visitas canceladas.'); return; }
+  if(!await confirmModal('Apagar canceladas', `Apagar ${n} visita${n>1?'s':''} cancelada${n>1?'s':''}?`)) return;
+  Store.visits=Store.visits.filter(v=>v.status!=='cancelada'); render(); toast('Canceladas apagadas.');
+};
 
 /* ---------- config e acessos ---------- */
 function viewAdmin(){
@@ -969,8 +982,6 @@ function viewConfig(){
   <div class="maya-card p-4 mb-3 anim-in" style="opacity:1"><div class="flex items-center gap-3 flex-wrap"><div class="flex-1"><b>Sessão atual</b><div class="text-xs" style="color:var(--muted)">Conectado ao Supabase. Orçamentos, clientes e catálogo sobem sozinhos para a nuvem.</div></div></div><div class="mt-3">${window.CloudSync?.accountHtml?window.CloudSync.accountHtml():'Carregando sessão…'}</div>
     <button type="button" class="maya-btn w-full mt-3" onclick="installApp()">Instalar no celular ou computador</button>
     <p class="text-xs mt-2" style="color:var(--muted)">iPhone: Safari → Compartilhar → Adicionar à Tela de Início. Android e PC (Chrome/Edge): toque em Instalar.</p>
-    <button type="button" class="maya-btn-ghost w-full mt-2" onclick="refreshSystem()">Atualizar sistema</button>
-    <p class="text-xs mt-2" style="color:var(--muted)">Se a tela parecer antiga, toque aqui. Limpa o cache e recarrega a versão nova.</p>
     <button type="button" class="maya-btn-ghost w-full mt-2" onclick="remindersEnable()">Ativar aviso de visita</button>
     <p class="text-xs mt-2" style="color:var(--muted)">3 dias antes da visita agendada o celular recebe uma notificação. No iPhone, o app precisa estar na tela inicial e as notificações permitidas.</p>
   </div>

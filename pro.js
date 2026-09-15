@@ -73,11 +73,11 @@ function dashProHTML(){
   const t=todayISO(), soon=addDays(t,7);
   const expiring=pend.filter(b=>b.validity&&b.validity>=t&&b.validity<=soon).sort((a,b)=>String(a.validity).localeCompare(String(b.validity)));
   const expired=(budgets||[]).filter(b=>b.status==='expirado').sort((a,b)=>String(b.validity).localeCompare(String(a.validity))).slice(0,4);
-  const upcoming=visits.filter(v=>v.status!=='concluída'&&v.date>=t).sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(0,5);
+  const upcoming=visits.filter(v=>v.status!=='concluída'&&v.status!=='cancelada'&&v.date>=t).sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(0,5);
   const toBill=contracts.filter(c=>monthKey(c.lastBilled||'2000-01')!==mk);
   const kpi=(l,id,v,money)=>`<div class="maya-card p-4 anim-in"><div class="text-xs font-bold" style="color:var(--muted)">${l}</div><div class="kpi-num" id="${id}">${money?brl(v):v}</div></div>`;
   const hr=new Date().getHours(), greet=hr<12?'Bom dia':hr<18?'Boa tarde':'Boa noite';
-  const todayVs=visits.filter(v=>v.date===t&&v.status!=='concluída');
+  const todayVs=visits.filter(v=>v.date===t&&v.status!=='concluída'&&v.status!=='cancelada');
   const firstName=(Store.settings.company||'MAYA Garden').split(' ')[0];
   const heroSum=pl(pend.length,'orçamento ativo','orçamentos ativos')+' • '+pl(todayVs.length,'visita hoje','visitas hoje',true);
   const heroHtml=`<div class="hero mb-3 anim-in"><span class="orb"></span><span class="orb"></span><span class="orb"></span><h1>${greet}!</h1><p>${heroDate()} — ${heroSum}.</p></div>`;
@@ -295,24 +295,31 @@ function agendaProHTML(){
   let cells=''; for(let i=0;i<start;i++) cells+='<div></div>';
   for(let d=1;d<=dim;d++){ const iso=`${Y}-${String(M).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const vs=byDay[iso]||[]; const sel=window.CalDay===iso; const isToday=iso===todayISO();
-    cells+=`<button onclick="calPick('${iso}')" class="cal-day${sel?' sel':''}${isToday?' today':''}">${d}${vs.length?`<span class="cal-dot">${vs.length}</span>`:''}</button>`; }
+    const live=vs.filter(v=>v.status!=='cancelada').length;
+    cells+=`<button onclick="calPick('${iso}')" class="cal-day${sel?' sel':''}${isToday?' today':''}">${d}${live?`<span class="cal-dot">${live}</span>`:''}</button>`; }
   const dayVs=(Store.visits||[]).filter(v=>v.date===window.CalDay).sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
+  const nCanc=(Store.visits||[]).filter(v=>v.status==='cancelada').length;
   const due=(window.MayaReminders?.dueVisits?.()||[]);
   const perm=window.MayaReminders?.permission?.()||'default';
   const remindBox = due.length
     ? `<div class="maya-card p-3 mb-3 anim-in" style="border-color:#4CAF50"><b>Visita em 3 dias</b>${due.map(v=>`<div class="text-sm mt-1">${esc(v.client||'Cliente')} • ${fmtD(v.date)} ${esc(v.time||'')} ${v.service?'• '+esc(v.service):''}</div>`).join('')}</div>`
     : (perm!=='granted' ? `<div class="maya-card p-3 mb-3 anim-in"><div class="flex items-center gap-2 flex-wrap"><div class="flex-1 text-sm">Avisamos <b>3 dias antes</b> da visita no celular.</div><button class="maya-btn text-sm" onclick="remindersEnable()">Ativar avisos</button></div></div>` : `<p class="text-xs mb-3" style="color:var(--muted)">Aviso automático 3 dias antes de cada visita.</p>`);
+  const visitBtns=v=>{
+    const st=v.status||'agendada';
+    const open=st!=='concluída'&&st!=='cancelada';
+    return `<div class="visit-actions">${open?`<button class="maya-btn-ghost" onclick="toggleVisit('${v.id}')">Concluir</button><button class="maya-btn-ghost" onclick="cancelVisit('${v.id}')">Cancelar</button>`:''}${st==='concluída'?`<button class="maya-btn-ghost" onclick="toggleVisit('${v.id}')">Reabrir</button>`:''}${st==='cancelada'?`<button class="maya-btn-ghost" onclick="reopenVisit('${v.id}')">Reativar</button>`:''}<button class="maya-btn-ghost visit-del" onclick="delVisit('${v.id}')">Apagar</button></div>`;
+  };
   return `<div class="flex items-center gap-2 mb-3 anim-in flex-wrap"><h1 class="text-2xl font-black">Agenda</h1><div class="flex-1"></div>
     <button class="maya-btn-ghost text-sm" onclick="calNav(-1)">←</button><b class="capitalize">${label}</b><button class="maya-btn-ghost text-sm" onclick="calNav(1)">→</button>
     <button class="maya-btn-ghost text-sm" onclick="openChecklist('')">Checklist</button>
+    ${nCanc?`<button class="maya-btn-ghost text-sm visit-del" onclick="clearCancelledVisits()">Apagar ${nCanc} cancelada${nCanc>1?'s':''}</button>`:''}
     <button class="maya-btn text-sm" onclick="addVisitOn(window.CalDay)">+ Agendar dia ${fmtD(window.CalDay)}</button></div>
   ${remindBox}
   <div class="grid lg:grid-cols-5 gap-3">
     <div class="maya-card p-3 anim-in lg:col-span-3"><div class="cal-grid text-xs font-bold mb-1" style="color:var(--muted)">${['SEG','TER','QUA','QUI','SEX','SÁB','DOM'].map(d=>`<div class="text-center">${d}</div>`).join('')}</div>
     <div class="cal-grid">${cells}</div></div>
     <div class="maya-card p-4 anim-in lg:col-span-2"><h2 class="font-extrabold mb-2">${fmtD(window.CalDay)}</h2>
-    ${dayVs.length?dayVs.map(v=>`<div class="border rounded-xl p-2 mb-2" style="border-color:var(--line)"><b>${esc(v.time||'—')} — ${esc(v.client)}</b><div class="text-sm" style="color:var(--muted)">${esc(v.service||'')} ${v.price?'• '+brl(v.price):''} • ${esc(v.status||'agendada')}</div>
-      <div class="flex gap-1 mt-1 text-xs"><button class="maya-btn-ghost px-2 py-1" onclick="toggleVisit('${v.id}')">✓ ${v.status==='concluída'?'reabrir':'concluir'}</button><button class="maya-btn-ghost px-2 py-1" onclick="openChecklist(this.dataset.cli)" data-cli="${esc(v.client)}">Checklist</button><button class="maya-btn-ghost px-2 py-1 !text-red-700" onclick="delVisit('${v.id}')">Excluir</button></div></div>`).join(''):emptyState('Dia livre','Nada agendado para este dia.','Agendar',"addVisitOn(window.CalDay)")}
+    ${dayVs.length?dayVs.map(v=>`<div class="visit-card ${v.status==='cancelada'?'is-cancel':''} ${v.status==='concluída'?'is-done':''}"><b>${esc(v.time||'—')} — ${esc(v.client)}</b><div class="text-sm" style="color:var(--muted)">${esc(v.service||'')} ${v.price?'• '+brl(v.price):''}</div><span class="maya-badge ${v.status==='cancelada'?'b-canc':v.status==='concluída'?'b-conc':'b-aberta'}">${esc(v.status||'agendada')}</span>${visitBtns(v)}</div>`).join(''):emptyState('Dia livre','Nada agendado para este dia.','Agendar',"addVisitOn(window.CalDay)")}
     </div>
   </div>`;
 }
