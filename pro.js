@@ -232,7 +232,7 @@ window.billContract=id=>{ const a=Store.contracts, c=a.find(x=>x.id===id); if(!c
   b.notes='Cobrança de contrato de manutenção recorrente.'; b.contractId=c.id; recalcDraft2(b);
   const all=Store.budgets; all.push(b); Store.budgets=all; c.lastBilled=t; Store.contracts=a;
   toast(`Cobrança ${b.number} gerada!`); render(); };
-function recalcDraft2(b){ b.subtotal=(b.items||[]).reduce((s,it)=>s+(Number(it.qty)||0)*(Number(it.unit)||0),0); b.discountVal=b.discountType==='pct'?b.subtotal*Number(b.discount||0)/100:Number(b.discount||0); b.total=Math.max(0,b.subtotal-b.discountVal+Number(b.displacement||0)); }
+function recalcDraft2(b){ b.serviceValue=Math.max(0,Number(b.serviceValue)||0); b.subtotal=(b.items||[]).reduce((s,it)=>s+(Number(it.qty)||0)*(Number(it.unit)||0),0)+b.serviceValue; b.discountVal=b.discountType==='pct'?b.subtotal*Number(b.discount||0)/100:Number(b.discount||0); b.total=Math.max(0,b.subtotal-b.discountVal+Number(b.displacement||0)); }
 
 /* ---------- RELATÓRIOS ---------- */
 function repSeen(){ try{ return localStorage.getItem('maya_rep_seen')==='1'; }catch(e){ return false; } }
@@ -592,8 +592,9 @@ window.billOS=budgetId=>{ const b=(Store.budgets||[]).find(x=>x.id===budgetId); 
   const o={id:Store.uid(), number:Store.nextOSNumber(), createdAt:new Date().toISOString(), budgetId:b.id,
     client:{name:b.client?.name||'', phone:b.client?.phone||'', address:b.client?.address||''},
     date:todayISO(), team:'', status:'aberta',
-    items:(b.items||[]).map(it=>({desc:String(it.desc||'Serviço'), qty:Number(it.qty)||1})),
-    notes:(b.notes?b.notes+'\n':'')+`Gerada do orçamento Nº ${b.number}.`};
+    items:(b.items||[]).filter(it=>String(it.desc||'').trim()).map(it=>({desc:String(it.desc||'Serviço'), qty:Number(it.qty)||1})),
+    notes:(b.serviceText?b.serviceText+'\n':'')+(b.notes?b.notes+'\n':'')+`Gerada do orçamento Nº ${b.number}.`};
+  if(!o.items.length && String(b.serviceText||'').trim()) o.items=[{desc:String(b.serviceText).slice(0,180), qty:1}];
   const a=Store.os; a.push(o); Store.os=a;
   toast(`OS ${o.number} gerada!`); location.hash='#/os';
 };

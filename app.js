@@ -44,7 +44,8 @@ function recalcDraft(){
   if(Draft.discountType==='pct') Draft.discount = Math.min(100, Draft.discount);
   Draft.displacement = Math.max(0, Number(Draft.displacement)||0);
   Draft.signalPct = Math.min(100, Math.max(0, Number(Draft.signalPct)||0));
-  Draft.subtotal = (Draft.items||[]).reduce((s,it)=>s+(Number(it.qty)||0)*(Number(it.unit)||0),0);
+  Draft.serviceValue = Math.max(0, Number(Draft.serviceValue)||0);
+  Draft.subtotal = (Draft.items||[]).reduce((s,it)=>s+(Number(it.qty)||0)*(Number(it.unit)||0),0) + Draft.serviceValue;
   const d = Number(Draft.discount||0);
   Draft.discountVal = Draft.discountType==='pct' ? Draft.subtotal*d/100 : d;
   Draft.total = Math.max(0, Draft.subtotal - Draft.discountVal + (Number(Draft.displacement)||0));
@@ -58,7 +59,7 @@ function blankBudget(){
     items:[{desc:'',qty:1,unitLabel:'un',unit:0}],
     // compat: usamos it.unit como valor; unitPrice espelho
     discount:0, discountType:'pct', discountVal:0, subtotal:0, displacement:Number(st.displacementDefault||0),
-    signalPct:Number(st.signalPct||50), payment:'Pix', payMethod:'Pix', payParcels:1, notes:'', photos:[], paid:{entries:[]}, createdAt:new Date().toISOString()
+    signalPct:Number(st.signalPct||50), payment:'Pix', payMethod:'Pix', payParcels:1, notes:'', serviceText:'', serviceValue:0, photos:[], paid:{entries:[]}, createdAt:new Date().toISOString()
   };
 }
 // normaliza item antigo (unit vs unitPrice)
@@ -68,6 +69,8 @@ function normItems(b){
   if(!b.paid || !Array.isArray(b.paid.entries)) b.paid={entries:[]};
   if(!b.payMethod) b.payMethod=b.payment||'Pix';
   if(!b.payParcels) b.payParcels=1;
+  if(b.serviceText==null) b.serviceText='';
+  b.serviceValue=Math.max(0, Number(b.serviceValue)||0);
   return b;
 }
 function payLabel(b){ const m=(b&&b.payMethod)||(b&&b.payment)||'Pix'; const n=Math.min(21,Math.max(1,Number((b&&b.payParcels)||1)));
@@ -295,7 +298,7 @@ function viewEditor(isEdit){
       <div class="grid grid-cols-2 gap-2 mt-2">
         <label class="text-xs font-bold">Sinal %<input type="number" id="f-signal" class="maya-input" value="${esc(d.signalPct)}"></label>
       </div>
-      <label class="text-xs font-bold block mt-2">Observações<textarea id="f-notes" class="maya-textarea" rows="2" placeholder="Ex: material incluso, garantia, prazo execução…">${esc(d.notes)}</textarea></label>
+      <label class="text-xs font-bold block mt-2">Observações internas<textarea id="f-notes" class="maya-textarea" rows="2" placeholder="Só para vocês. Não substitui a descrição do serviço.">${esc(d.notes)}</textarea></label>
     </div>
 
     <div class="maya-card p-4 anim-in">
@@ -326,6 +329,13 @@ function viewEditor(isEdit){
         <div class="text-xs font-bold" id="t-alert"></div>
       </div>
     </div>
+  </div>
+
+  <div class="maya-card p-4 mt-3 anim-in">
+    <h2 class="font-extrabold mb-1">Descrição livre do orçamento</h2>
+    <p class="text-xs mb-2" style="color:var(--muted)">Escreva o serviço inteiro aqui, do seu jeito. Não precisa usar catálogo nem pacotes. Esse texto sai no PDF.</p>
+    <textarea id="f-servicetext" class="maya-textarea free-scope" rows="8" placeholder="Ex: Limpeza completa do jardim, poda das cercas-vivas, capina dos canteiros, adubação e varrição. Material incluso. Execução em 1 dia.">${esc(d.serviceText||'')}</textarea>
+    <label class="text-xs font-bold block mt-2">Valor deste serviço R$<input type="number" step="any" id="f-servicevalue" class="maya-input" value="${esc(d.serviceValue||0)}" placeholder="0"></label>
   </div>
 
   <div class="grid lg:grid-cols-2 gap-3 mt-3">
@@ -438,6 +448,8 @@ function collectEditor(){
   Draft.payment = Draft.payMethod;
   Draft.signalPct = Number($('#f-signal').value||0);
   Draft.notes = $('#f-notes').value;
+  Draft.serviceText = ($('#f-servicetext')||{}).value || '';
+  Draft.serviceValue = Number(($('#f-servicevalue')||{}).value||0);
   Draft.discount = Number($('#f-desc').value||0);
   Draft.discountType = $('#f-desct').value;
   Draft.displacement = Number($('#f-desloc').value||0);
@@ -466,6 +478,8 @@ function collectSilent(){
     Draft.date=$('#f-date').value; Draft.validity=$('#f-valid').value; Draft.status=$('#f-status').value;
     Draft.payMethod=$('#f-paymethod').value; Draft.payParcels=Math.min(21,Math.max(1,Number($('#f-parcels').value||1))); Draft.payment=Draft.payMethod;
     Draft.signalPct=Number($('#f-signal').value||0); Draft.notes=$('#f-notes').value;
+    if($('#f-servicetext')) Draft.serviceText=$('#f-servicetext').value;
+    if($('#f-servicevalue')) Draft.serviceValue=Number($('#f-servicevalue').value||0);
     Draft.discount=Number($('#f-desc').value||0); Draft.discountType=$('#f-desct').value; Draft.displacement=Number($('#f-desloc').value||0);
   }catch{}
 }
@@ -501,8 +515,10 @@ function paintPreviewOnly(){
       <div class="pp-meta"><div class="pp-num">Nº ${esc(Draft.number)}</div><div>Emissão ${fmtDate(Draft.date)}</div><div>Válida até ${fmtDate(Draft.validity)}</div><div style="margin-top:2px"><b>${esc(Draft.status.toUpperCase())}</b></div></div>
     </div>
     <div class="pp-client"><b>Cliente:</b> ${esc(Draft.client.name||'-')} &nbsp;•&nbsp; ${esc(Draft.client.phone||'-')} &nbsp;•&nbsp; ${esc(Draft.client.address||'-')}</div>
-    <table class="table-maya"><tr><th>Descrição</th><th>Qtd</th><th>Unit</th><th>Total</th></tr>
-    ${(Draft.items||[]).map(it=>`<tr><td>${esc(it.desc||'-')}</td><td>${esc(it.qty)} ${esc(it.unitLabel||'')}</td><td>${brl(it.unit)}</td><td class="font-bold">${brl((Number(it.qty)||0)*(Number(it.unit)||0))}</td></tr>`).join('')}</table>
+    ${String(Draft.serviceText||'').trim()?`<div class="text-sm mt-2" style="white-space:pre-wrap;color:#222"><b>Escopo do serviço</b><br>${esc(Draft.serviceText)}</div>`:''}
+    ${Number(Draft.serviceValue)>0?`<div class="text-sm mt-1">Serviço (texto livre): <b>${brl(Draft.serviceValue)}</b></div>`:''}
+    ${(Draft.items||[]).some(it=>String(it.desc||'').trim()||Number(it.unit)>0)?`<table class="table-maya"><tr><th>Descrição</th><th>Qtd</th><th>Unit</th><th>Total</th></tr>
+    ${(Draft.items||[]).filter(it=>String(it.desc||'').trim()||Number(it.unit)>0).map(it=>`<tr><td>${esc(it.desc||'-')}</td><td>${esc(it.qty)} ${esc(it.unitLabel||'')}</td><td>${brl(it.unit)}</td><td class="font-bold">${brl((Number(it.qty)||0)*(Number(it.unit)||0))}</td></tr>`).join('')}</table>`:''}
     ${Number(Draft.displacement)>0?`<div class="text-xs mt-2 text-right" style="color:#555">Taxa de deslocamento: ${brl(Draft.displacement)}</div>`:''}
     <div class="pp-totalbox"><span class="text-sm" style="color:#1A5D1A">VALOR TOTAL&nbsp;&nbsp;</span><span class="pp-total">${brl(Draft.total)}</span></div>
     <div class="text-xs mt-1" style="color:#555">Pagamento: ${esc(payLabel(Draft))} ${Draft.signalPct?`• Sinal ${esc(Draft.signalPct)}% (${brl(Draft.total*Number(Draft.signalPct)/100)}) • Saldo na conclusão (${brl(Draft.total*(1-Number(Draft.signalPct)/100))})`:''}</div>
@@ -525,7 +541,10 @@ function shrinkPhoto(src, max, q){
 window.saveDraft = async (isEdit)=>{
   collectEditor();
   if(!Draft.client.name){ toast('Preencha o nome do cliente'); $('#f-name').focus(); return; }
-  if(!(Draft.items||[]).some(it=>String(it.desc).trim() && Number(it.unit)>0)){ toast('Adicione ao menos 1 item com valor'); return; }
+  const hasItem = (Draft.items||[]).some(it=>String(it.desc||'').trim() && Number(it.unit)>0);
+  const hasFree = String(Draft.serviceText||'').trim().length>0;
+  if(!hasItem && !hasFree){ toast('Escreva a descrição do serviço ou adicione um item'); return; }
+  if(!(Number(Draft.total)>0) && !hasItem){ toast('Informe o valor do serviço'); $('#f-servicevalue')?.focus(); return; }
   window._dirty=false;
   const all = Store.budgets||[];
   const ix = all.findIndex(b=>b.id===Draft.id);
@@ -550,7 +569,11 @@ window.saveDraft = async (isEdit)=>{
 window.pickClient = id=>{ const c=(Store.clients||[]).find(x=>x.id===id); if(!c||!Draft) return; Draft.client={name:c.name,phone:c.phone||'',address:c.address||''}; $('#f-name').value=c.name; $('#f-phone').value=c.phone||''; $('#f-addr').value=c.address||''; paintPreview(); };
 window.saveClientFromDraft = ()=>{ collectSilent(); if(!Draft.client.name) return toast('Nome vazio'); const cs=Store.clients||[]; cs.push({id:Store.uid(),...Draft.client}); Store.clients=cs; toast('Cliente salvo!'); };
 
-window.doPDF = async ()=>{ collectSilent(); recalcDraft(); if(!Draft.client.name){ toast('Preencha cliente antes do PDF'); return; } toast('Gerando PDF com marca d\'água…'); await gerarPDF(Draft); };
+window.doPDF = async ()=>{ collectSilent(); recalcDraft(); if(!Draft.client.name){ toast('Preencha cliente antes do PDF'); return; }
+  const hasItem = (Draft.items||[]).some(it=>String(it.desc||'').trim());
+  const hasFree = String(Draft.serviceText||'').trim().length>0;
+  if(!hasItem && !hasFree){ toast('Escreva a descrição do serviço ou adicione um item'); return; }
+  toast('Gerando PDF com marca d\'água…'); await gerarPDF(Draft); };
 window.copyZap = ()=>{ collectSilent(); recalcDraft(); const t=zapFill(Draft); navigator.clipboard?.writeText(t).then(()=>toast('Mensagem copiada! Anexe o PDF no WhatsApp.')); };
 
 /* ---------- drawer/modal ---------- */

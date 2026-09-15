@@ -97,7 +97,27 @@ async function gerarPDF(budget){
   if(budget.contractId) doc.text('Contrato de manutenção recorrente', M+3, y+24);
   y += 32;
 
-  // tabela itens
+  function ensureY(need){ if(y+(need||12) > H-42){ doc.addPage(); y=34; } }
+  function printFreeText(title, text){
+    const body = String(text||'').replace(/\r\n/g,'\n').trim();
+    if(!body) return;
+    ensureY(16);
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(26,93,26);
+    doc.text(title, M, y); y+=3;
+    doc.setDrawColor(26,93,26); doc.setLineWidth(0.45); doc.line(M, y, W-M, y); y+=6; doc.setLineWidth(0.2);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(35,35,35);
+    for(const para of body.split('\n')){
+      const lines = doc.splitTextToSize(para.length?para:' ', W-2*M);
+      for(const l of lines){ ensureY(8); doc.text(l, M, y); y+=4.7; }
+      y+=1.2;
+    }
+    y+=3; doc.setTextColor(20,20,20);
+  }
+
+  printFreeText('Escopo do serviço', budget.serviceText);
+
+  // tabela itens (pula linhas vazias)
+  const priced = (budget.items||[]).filter(it=>String(it.desc||'').trim() || Number(it.unit)>0);
   const colX = [M, M+108, M+128, M+152];
   function tableHead(yy){
     doc.setFillColor(26,93,26); doc.rect(M,yy,W-2*M,8,'F');
@@ -106,23 +126,30 @@ async function gerarPDF(budget){
     doc.text('Qtd', colX[1]+2, yy+5.5); doc.text('Unit', colX[2]+2, yy+5.5); doc.text('Total', colX[3]+2, yy+5.5);
     doc.setTextColor(20,20,20);
   }
-  tableHead(y); y+=11;
-  doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  const lineH = 6;
-  for(const it of (budget.items||[])){
-    const desc = String(it.desc||'').slice(0,90);
-    const lines = doc.splitTextToSize(desc, 100);
-    const h = Math.max(lineH, lines.length*4.6+2);
-    if(y+h > H-58){ doc.addPage(); y=34; tableHead(y); y+=11; }
-    doc.text(lines, colX[0]+2, y+4);
-    doc.text(String(it.qty??'')+(it.unitLabel?' '+String(it.unitLabel).slice(0,8):''), colX[1]+2, y+4);
-    doc.text(brlPDF(it.unit), colX[2]+2, y+4);
-    doc.text(brlPDF((Number(it.qty)||0)*(Number(it.unit)||0)), colX[3]+2, y+4);
-    // linha divisória
-    doc.setDrawColor(225,230,210); doc.line(M, y+h-1, W-M, y+h-1);
-    y += h;
+  if(priced.length){
+    tableHead(y); y+=11;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    const lineH = 6;
+    for(const it of priced){
+      const desc = String(it.desc||'');
+      const lines = doc.splitTextToSize(desc, 100);
+      const h = Math.max(lineH, lines.length*4.6+2);
+      if(y+h > H-58){ doc.addPage(); y=34; tableHead(y); y+=11; }
+      doc.text(lines, colX[0]+2, y+4);
+      doc.text(String(it.qty??'')+(it.unitLabel?' '+String(it.unitLabel).slice(0,8):''), colX[1]+2, y+4);
+      doc.text(brlPDF(it.unit), colX[2]+2, y+4);
+      doc.text(brlPDF((Number(it.qty)||0)*(Number(it.unit)||0)), colX[3]+2, y+4);
+      doc.setDrawColor(225,230,210); doc.line(M, y+h-1, W-M, y+h-1);
+      y += h;
+    }
+    y += 3;
   }
-  y += 3;
+  if(Number(budget.serviceValue)>0 && priced.length){
+    ensureY(10);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(40,40,40);
+    doc.text(`Serviço: ${brlPDF(budget.serviceValue)}`, M, y);
+    y+=7; doc.setTextColor(20,20,20);
+  }
   if(y > H-70){ doc.addPage(); y=34; }
   // valor final apresentado ao cliente; os cálculos internos não são expostos no PDF
   const rx = W-M-76;
