@@ -383,3 +383,24 @@ body.maya-readonly main button[disabled]{opacity:.55;cursor:not-allowed}
   .price-trio{grid-template-columns:repeat(3,minmax(0,1fr))}
   .price-trio.one{grid-template-columns:minmax(0,1fr)}
 }
+
+/* PWA no iPhone: o relógio cobre o topo. Empurra o header para a área segura. */
+.maya-header{
+  position:sticky;
+  top:0;
+  z-index:45;
+  padding-top:env(safe-area-inset-top, 0px);
+}
+.maya-header .topbar-cta,
+.maya-header .mobile-menu-toggle{
+  position:relative;
+  z-index:2;
+  min-height:44px;
+  pointer-events:auto;
+}
+.maya-header::before,
+.maya-header::after{pointer-events:none}
+#errbox{padding-top:calc(10px + env(safe-area-inset-top, 0px))}
+@media(min-width:1024px){
+  .side{top:0;padding-top:calc(18px + env(safe-area-inset-top, 0px))}
+}
