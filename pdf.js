@@ -173,13 +173,6 @@ async function gerarPDF(budget){
     const paymentLines = doc.splitTextToSize(payment, W-2*M);
     doc.text(paymentLines, M, y); y += paymentLines.length*4.5 + 2;
   }
-  if(budget.notes){
-    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text('Observações:', M, y); y+=5;
-    doc.setFont('helvetica','normal');
-    const nl = doc.splitTextToSize(String(budget.notes), W-2*M);
-    for(const l of nl){ if(y>H-40){doc.addPage(); y=34;} doc.text(l, M, y); y+=4.5; }
-    y+=2;
-  }
   if(y>H-45){ doc.addPage(); y=34; }
   doc.setFontSize(8.5); doc.setTextColor(90,90,90);
   const val = doc.splitTextToSize(`Validade: ${fmtDPDF(budget.validity)} • ${st.headerText||''}${st.pix?` • Pix: ${st.pix}`:''}`, W-2*M);
@@ -191,27 +184,6 @@ async function gerarPDF(budget){
     y+=2;
   }
   doc.setTextColor(20,20,20);
-  // fotos antes/depois (2 por linha)
-  const photos = Array.isArray(budget.photos)?budget.photos:[];
-  if(photos.length){
-    if(y>H-110){ doc.addPage(); y=34; }
-    y+=2; doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(26,93,26);
-    doc.text('Registro fotográfico', M, y); y+=4;
-    doc.setDrawColor(26,93,26); doc.setLineWidth(0.6); doc.line(M, y, W-M, y); y+=6; doc.setLineWidth(0.2);
-    const gap=6, cw=(W-2*M-gap)/2, chh=62;
-    for(let i=0;i<photos.length;i+=2){
-      if(y+chh+8>H-20){ doc.addPage(); y=34; }
-      for(let k=0;k<2;k++){ const p=photos[i+k]; if(!p) break;
-        const x=M+k*(cw+gap);
-        try{ doc.addImage(p.src, p.src.indexOf('image/png')>=0?'PNG':'JPEG', x, y, cw, chh); }
-        catch(e){ doc.setDrawColor(200,200,200); doc.rect(x,y,cw,chh); }
-        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(80,80,80);
-        doc.text(String(p.label||`Foto ${i+k+1}`).slice(0,48), x+2, y+chh+5);
-      }
-      y+=chh+11;
-    }
-    doc.setTextColor(20,20,20);
-  }
   // encerramento profissional (sem assinaturas)
   y += 4;
   doc.setDrawColor(26,93,26); doc.setLineWidth(0.6); doc.line(M, y, W-M, y); y += 6;

@@ -345,3 +345,18 @@ body.maya-readonly main button[disabled]{opacity:.55;cursor:not-allowed}
 .quote-mode-btn{min-height:44px;border:0;border-radius:10px;background:transparent;color:#b8dfbd;font:800 .9rem/1 Inter,system-ui,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .quote-mode-btn.on{background:#1f7a2b;color:#fff;box-shadow:0 6px 16px rgba(31,122,43,.28)}
 #livre-panel[hidden],#items-panel[hidden]{display:none!important}
+
+.extra-fold{border:1px solid var(--line);border-radius:10px;padding:.45rem .65rem;background:#0E160F}
+.extra-fold summary{cursor:pointer;font-size:.78rem;font-weight:800;color:var(--muted);list-style:none}
+.extra-fold summary::-webkit-details-marker{display:none}
+.editor-sticky{display:none}
+@media(max-width:1023px){
+  .editor-sticky{display:grid;grid-template-columns:1fr 1fr;gap:8px;position:sticky;bottom:0;z-index:40;padding:10px 0 calc(10px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(12,18,12,0),#0C120C 32%)}
+  .editor-sticky button{min-height:48px;font-weight:800}
+  .preview-toggle{min-height:46px}
+}
+@media(min-width:1024px){
+  .preview-toggle{display:none}
+  #preview-wrap{display:block!important}
+  .editor-sticky{display:none}
+}

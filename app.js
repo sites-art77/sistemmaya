@@ -257,7 +257,7 @@ function viewDashboardLegacy(){
 }
 function afterRender(r){
   if(r==='#/'||r===''){ sweepExpired(); if(window.dashAfter) dashAfter(); }
-  if(r.startsWith('#/novo')||r.startsWith('#/editar')){ recalcDraft(); window.__lastTot = Draft.total; paintEditorTotals(); paintPreview(); applyWmVars(); paintPhotos(); paintPaid(); toggleParcels(); applyQuoteMode(); }
+  if(r.startsWith('#/novo')||r.startsWith('#/editar')){ recalcDraft(); window.__lastTot = Draft.total; paintEditorTotals(); paintPreview(); applyWmVars(); paintPaid(); toggleParcels(); applyQuoteMode(); }
   if(r.startsWith('#/orcamentos') && window.renderList){ try{ renderList(); }catch(e){ console.warn(e); } }
   if(r.startsWith('#/relatorios') && window.repAfter){ try{ repAfter(); }catch(e){} }
 }
@@ -305,7 +305,7 @@ function viewEditor(isEdit){
       <div class="grid grid-cols-2 gap-2 mt-2">
         <label class="text-xs font-bold">Sinal %<input type="number" id="f-signal" class="maya-input" value="${esc(d.signalPct)}"></label>
       </div>
-      <label class="text-xs font-bold block mt-2">Observações internas<textarea id="f-notes" class="maya-textarea" rows="2" placeholder="Só para vocês. Não substitui a descrição do serviço.">${esc(d.notes)}</textarea></label>
+      <details class="extra-fold mt-2"><summary>Observações internas</summary><textarea id="f-notes" class="maya-textarea mt-2" rows="2" placeholder="Só para vocês. Não sai no PDF.">${esc(d.notes)}</textarea></details>
     </div>
 
     <div class="maya-card p-4 anim-in" id="quote-mode-card">
@@ -319,12 +319,8 @@ function viewEditor(isEdit){
         <p class="text-xs mb-2" style="color:var(--muted)">Escreva tudo do orçamento aqui. Sem catálogo, sem pacote. Esse texto sai no PDF.</p>
         <textarea id="f-servicetext" class="maya-textarea free-scope" rows="10" placeholder="Ex: Limpeza completa do jardim, poda das cercas-vivas, capina dos canteiros, adubação e varrição. Material incluso. Execução em 1 dia.">${esc(d.serviceText||'')}</textarea>
         <label class="text-xs font-bold block mt-2">Valor do serviço R$<input type="number" step="any" id="f-servicevalue" class="maya-input" value="${esc(d.serviceValue||0)}" placeholder="0"></label>
-        <div class="price-tip p-3 mt-3">
-          <div class="font-extrabold">Dica de quanto cobrar</div>
-          <p class="text-xs mb-2" style="color:var(--muted)">3 toques: serviço → tamanho → padrão.</p>
-          <button class="maya-btn mt-1 text-sm w-full" onclick="openCalc(null)">Quanto cobrar?</button>
-          <div id="tip-last" class="text-xs mt-1 text-gray-700"></div>
-        </div>
+        <button class="maya-btn-ghost text-sm w-full mt-2" onclick="openCalc(null)">Quanto cobrar?</button>
+        <div id="tip-last" class="text-xs mt-1" style="color:var(--muted)"></div>
       </div>
 
       <div id="items-panel" ${(d.quoteMode||'livre')==='livre'?'hidden':''}>
@@ -353,30 +349,27 @@ function viewEditor(isEdit){
     </div>
   </div>
 
-  <div class="grid lg:grid-cols-2 gap-3 mt-3">
-    <div class="maya-card p-4 anim-in">
-      <div class="flex items-center gap-2 mb-1"><h2 class="sec-title">Fotos do serviço</h2><div class="flex-1"></div>
-      <label class="maya-btn-ghost text-xs cursor-pointer">+ Adicionar<input type="file" accept="image/*" multiple class="hidden" onchange="addPhotos(this)"></label></div>
-      <p class="text-xs mb-2" style="color:var(--muted)">Antes/depois. Saem impressas no PDF.</p>
-      <div id="photogrid" class="photo-grid"></div>
-    </div>
-    <div class="maya-card p-4 anim-in">
-      <div class="flex items-center gap-2 mb-1"><h2 class="sec-title">Recebimentos</h2><div class="flex-1"></div>
-      <button class="maya-btn text-xs" onclick="addPayment()">+ Registrar</button></div>
-      <div id="paidbox"></div>
-    </div>
+  <div class="maya-card p-4 mt-3 anim-in">
+    <div class="flex items-center gap-2 mb-1"><h2 class="sec-title">Recebimentos</h2><div class="flex-1"></div>
+    <button class="maya-btn text-xs" onclick="addPayment()">+ Registrar</button></div>
+    <div id="paidbox"></div>
   </div>
 
   <div class="mt-3 anim-in">
-    <h2 class="font-extrabold mb-2">3. Prévia idêntica ao PDF (com marca d'água)</h2>
-    <div id="print-area"><div class="budget-paper" id="paper"><div class="budget-inner p-5" id="preview"></div></div></div>
-    <div class="flex gap-2 mt-2 flex-wrap no-print">
-      <button class="maya-btn" onclick="saveDraft(${isEdit})">Salvar</button>
-      <button class="maya-btn-ghost" onclick="doPDF()">Baixar PDF</button>
-      <button class="maya-btn-ghost" onclick="copyZap()">Copiar msg</button>
-      <button class="maya-btn-ghost" onclick="openZapDraft()">Abrir WhatsApp</button>
-      <button class="maya-btn-ghost" onclick="printOSDraft()">Ordem de serviço</button>
+    <button type="button" class="maya-btn-ghost w-full preview-toggle" id="preview-toggle" onclick="togglePreview()">Ver prévia do PDF</button>
+    <div id="preview-wrap" hidden>
+      <h2 class="font-extrabold mb-2 mt-2">Prévia do PDF</h2>
+      <div id="print-area"><div class="budget-paper" id="paper"><div class="budget-inner p-5" id="preview"></div></div></div>
+      <div class="flex gap-2 mt-2 flex-wrap no-print">
+        <button class="maya-btn-ghost" onclick="copyZap()">Copiar msg</button>
+        <button class="maya-btn-ghost" onclick="openZapDraft()">Abrir WhatsApp</button>
+        <button class="maya-btn-ghost" onclick="printOSDraft()">Ordem de serviço</button>
+      </div>
     </div>
+  </div>
+  <div class="editor-sticky no-print">
+    <button class="maya-btn" onclick="saveDraft(${isEdit})">Salvar</button>
+    <button class="maya-btn-ghost" onclick="doPDF()">Baixar PDF</button>
   </div>
   </div>`;
 }
@@ -434,26 +427,15 @@ window.editItem = (i,f,v)=>{
 };
 window.addItem = ()=>{ Draft.items.push({desc:'',qty:1,unitLabel:'un',unit:0}); window._dirty=true; recalcDraft(); paintItems(); paintEditorTotalsOnly(); paintPreviewOnly(); };
 
-/* ---------- fotos antes/depois ---------- */
-window.addPhotos = input=>{
-  const files=[...(input.files||[])].slice(0,8); if(!files.length) return;
-  if((Draft.photos||[]).length+files.length>12){ toast('Máximo de 12 fotos por orçamento.'); return; }
-  let done=0;
-  const fin=()=>{ if(++done===files.length){ window._dirty=true; paintPhotos(); toast('Foto(s) adicionada(s)!'); } };
-  files.forEach(f=>{ const url=URL.createObjectURL(f); const img=new Image();
-    img.onload=()=>{ try{ const max=900, sc=Math.min(1,max/Math.max(img.width||1,img.height||1));
-        const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(img.width*sc)); c.height=Math.max(1,Math.round(img.height*sc));
-        c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
-        Draft.photos.push({id:Store.uid(), label:'', src:c.toDataURL('image/jpeg',0.68)});
-      }catch(e){ toast('Falha ao ler uma foto.'); } fin(); };
-    img.onerror=()=>{ URL.revokeObjectURL(url); fin(); };
-    img.src=url; });
-  input.value='';
+window.togglePreview = function(){
+  const box = document.getElementById('preview-wrap');
+  if(!box) return;
+  const show = box.hasAttribute('hidden');
+  if(show){ box.removeAttribute('hidden'); applyWmVars(); paintPreviewOnly(); }
+  else box.setAttribute('hidden','');
+  const btn = document.getElementById('preview-toggle');
+  if(btn) btn.textContent = show ? 'Ocultar prévia' : 'Ver prévia do PDF';
 };
-window.delPhoto = i=>{ Draft.photos.splice(i,1); window._dirty=true; paintPhotos(); };
-window.photoLabel = (i,v)=>{ if(Draft.photos[i]){ Draft.photos[i].label=v; window._dirty=true; } };
-function paintPhotos(){ const box=document.querySelector('#photogrid'); if(!box||!Draft) return;
-  box.innerHTML = (Draft.photos||[]).map((p,i)=>`<div class="photo-thumb"><img src="${p.src}" alt="foto ${i+1}" loading="lazy" onclick="openLight('${p.src}')" style="cursor:zoom-in"><button class="photo-x" onclick="delPhoto(${i})" title="Remover">×</button><input value="${esc(p.label||'')}" placeholder="Legenda (ex: antes)" oninput="photoLabel(${i},this.value)"></div>`).join('') || '<p class="text-xs" style="color:var(--muted);grid-column:1/-1">Nenhuma foto ainda.</p>'; }
 
 /* ---------- recebimentos ---------- */
 function paidInfo(){ recalcDraft(); const t=paidTotal(Draft), tot=Number(Draft.total)||0, rem=Math.max(0,tot-t);
@@ -559,7 +541,6 @@ function paintPreviewOnly(){
     ${Number(Draft.displacement)>0?`<div class="text-xs mt-2 text-right" style="color:#555">Taxa de deslocamento: ${brl(Draft.displacement)}</div>`:''}
     <div class="pp-totalbox"><span class="text-sm" style="color:#1A5D1A">VALOR TOTAL&nbsp;&nbsp;</span><span class="pp-total">${brl(Draft.total)}</span></div>
     <div class="text-xs mt-1" style="color:#555">Pagamento: ${esc(payLabel(Draft))} ${Draft.signalPct?`• Sinal ${esc(Draft.signalPct)}% (${brl(Draft.total*Number(Draft.signalPct)/100)}) • Saldo na conclusão (${brl(Draft.total*(1-Number(Draft.signalPct)/100))})`:''}</div>
-    ${Draft.notes?`<div class="text-xs mt-1" style="color:#333"><b>Obs:</b> ${esc(Draft.notes)}</div>`:''}
     <div class="text-xs mt-2" style="color:#777">${esc(st.headerText)} ${st.pix?`• Pix: ${esc(st.pix)}`:''}</div>`;
 }
 function paintPreview(){
@@ -567,14 +548,6 @@ function paintPreview(){
   paintPreviewOnly(); paintItems();
 }
 
-function shrinkPhoto(src, max, q){
-  return new Promise(res=>{ const img=new Image();
-    img.onload=()=>{ try{ const sc=Math.min(1,max/Math.max(img.width||1,img.height||1));
-      const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(img.width*sc)); c.height=Math.max(1,Math.round(img.height*sc));
-      c.getContext('2d').drawImage(img,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',q||0.6));
-    }catch(e){ res(src); } };
-    img.onerror=()=>res(src); img.src=src; });
-}
 window.saveDraft = async (isEdit)=>{
   collectEditor();
   if(!Draft.client.name){ toast('Preencha o nome do cliente'); $('#f-name').focus(); return; }
@@ -583,19 +556,13 @@ window.saveDraft = async (isEdit)=>{
   if(!hasItem && !hasFree){ toast('Escreva a descrição do serviço ou adicione um item'); return; }
   if(!(Number(Draft.total)>0) && !hasItem){ toast('Informe o valor do serviço'); $('#f-servicevalue')?.focus(); return; }
   window._dirty=false;
-  const all = Store.budgets||[];
-  const ix = all.findIndex(b=>b.id===Draft.id);
+  Draft.photos = [];
   Draft.updatedAt = new Date().toISOString();
+  const all = (Store.budgets||[]).map(b=>({...b, photos:[]}));
+  const ix = all.findIndex(b=>b.id===Draft.id);
   if(ix>=0) all[ix]=structuredClone(Draft); else all.push(structuredClone(Draft));
   try{ Store.budgets = all; }
-  catch(e){
-    try{ // sem espaço: otimiza as fotos e tenta de novo sozinho
-      for(const p of (Draft.photos||[])){ p.src = await shrinkPhoto(p.src, 600, 0.55); }
-      const ix2 = all.findIndex(b=>b.id===Draft.id);
-      if(ix2>=0) all[ix2]=structuredClone(Draft); else all.push(structuredClone(Draft));
-      Store.budgets = all; paintPhotos(); toast('Espaço otimizado e salvo!');
-    }catch(e2){ toast('Sem espaço: remova fotos e tente de novo.'); return; }
-  }
+  catch(e){ toast('Sem espaço no aparelho. Exclua orçamentos antigos e tente de novo.'); return; }
   // upsert cliente
   const cs = Store.clients||[];
   if(Draft.client.name && !cs.some(c=>c.name.toLowerCase()===Draft.client.name.toLowerCase())){ cs.push({id:Store.uid(),...Draft.client}); Store.clients=cs; }
