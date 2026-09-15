@@ -435,7 +435,7 @@ window.delPackage = async id=>{ if(!await confirmModal('Excluir pacote','Remover
 
 /* ---------- ESTADOS VAZIOS + LIGHTBOX + INSTALAR ---------- */
 function emptyState(t, s, btnLabel, btnGo){
-  const btn = btnLabel ? (String(btnGo||'').startsWith('#/') ? `<a href="${btnGo}" class="maya-btn text-sm inline-block mt-1">${esc(btnLabel)}</a>` : `<button class="maya-btn text-sm mt-1" onclick="${btnGo}">${esc(btnLabel)}</button>`) : '';
+  const btn = btnLabel ? (String(btnGo||'').startsWith('#/') ? `<a href="${btnGo}" class="maya-btn text-sm inline-block mt-1">${esc(btnLabel)}</a>` : `<button class="maya-btn text-sm mt-1" ${attrJs(btnGo)}>${esc(btnLabel)}</button>`) : '';
   return `<div class="empty anim-in" style="opacity:1"><svg width="52" height="52" viewBox="0 0 54 54" fill="none"><path d="M27 48 V26" stroke="#2E7D32" stroke-width="3" stroke-linecap="round"/><path d="M27 30 C18 30 12 24 11 15 C20 15 26 21 27 30 Z" fill="#2E7D32"/><path d="M27 26 C36 26 42 20 43 11 C34 11 28 17 27 26 Z" fill="#4CAF50"/><path d="M12 48 H42" stroke="#2E7D32" stroke-width="3" stroke-linecap="round"/></svg><div class="empty-t">${esc(t)}</div><div class="text-xs mb-1">${esc(s)}</div>${btn}</div>`;
 }
 window.emptyState = emptyState;
@@ -615,7 +615,7 @@ function viewOS(){
     <div class="text-xs mt-1" style="color:var(--muted)">${pl((o.items||[]).length,'tarefa','tarefas')}${o.budgetId?` • do orçamento ${esc((Store.budgets||[]).find(b=>b.id===o.budgetId)?.number||'')}`:''}</div>
     <div class="flex gap-1 mt-2 flex-wrap text-xs">
       <button class="maya-btn-ghost px-2 py-1" ${onCall('printOS', o.id)}>Imprimir</button>
-      <select class="maya-select !w-36 !py-1 text-xs" onchange="setOSStatus('${o.id}',this.value)">${OS_STATUS.map(s=>`<option value="${s}" ${o.status===s?'selected':''}>${s}</option>`).join('')}</select>
+      <select class="maya-select !w-36 !py-1 text-xs" ${attrEv('onchange', 'setOSStatus('+JSON.stringify(o.id)+',this.value)')}>${OS_STATUS.map(s=>`<option value="${s}" ${o.status===s?'selected':''}>${s}</option>`).join('')}</select>
       <button class="maya-btn-ghost px-2 py-1" ${onCall('editOS', o.id)}>Editar</button>
       <button class="maya-btn-ghost px-2 py-1 !text-red-700" ${onCall('delOS', o.id)}>Excluir</button>
     </div></div>`).join('')||emptyState('Sem ordens de serviço','Crie avulsa ou gere a partir de um orçamento.','Nova OS',"addOS()")}</div>`;

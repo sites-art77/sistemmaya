@@ -3,12 +3,13 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const brl = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-function attrJs(code){
+function attrEv(name, code){
   const amp='&'+'amp;';
   const quot='&'+'quot;';
   const lt='&'+'lt;';
-  return 'onclick="'+String(code).replace(/&/g,amp).replace(/"/g,quot).replace(/</g,lt)+'"';
+  return String(name)+'="'+String(code).replace(/&/g,amp).replace(/"/g,quot).replace(/</g,lt)+'"';
 }
+function attrJs(code){ return attrEv('onclick', code); }
 function onCall(fn, ...args){
   return attrJs(String(fn)+'('+args.map(a=>JSON.stringify(a)).join(',')+')');
 }
@@ -17,6 +18,8 @@ function onThen(pre, fn, ...args){
 }
 window.onCall = onCall;
 window.onThen = onThen;
+window.attrJs = attrJs;
+window.attrEv = attrEv;
 function numBR(v){
   if(typeof v==='number') return Number.isFinite(v)?v:0;
   let s=String(v??'').trim().replace(/[R$\s]/g,'');
@@ -366,7 +369,7 @@ function viewEditor(isEdit){
     <div class="flex-1"></div>
     <div class="budget-editor-actions">
       <button class="maya-btn-ghost" onclick="location.hash='#/orcamentos'">← Voltar</button>
-      <button class="maya-btn" onclick="saveDraft(${isEdit})">Salvar</button>
+      <button class="maya-btn" ${onCall('saveDraft', isEdit)}>Salvar</button>
       <button class="maya-btn-ghost" onclick="doPDF()">Baixar PDF</button>
     </div>
   </div>
@@ -471,7 +474,7 @@ function viewEditor(isEdit){
     </div>
   </div>
   <div class="editor-sticky no-print">
-    <button class="maya-btn" onclick="saveDraft(${isEdit})">Salvar</button>
+    <button class="maya-btn" ${onCall('saveDraft', isEdit)}>Salvar</button>
     <button class="maya-btn-ghost" onclick="doPDF()">Baixar PDF</button>
   </div>
   </div>`;
@@ -485,8 +488,8 @@ function itemRow(it, i){
       <label class="text-[11px] font-bold">Und<input class="maya-input" value="${esc(it.unitLabel||it.unit||'un')}" oninput="editItem(${i},'unitLabel',this.value)" placeholder="m²/hora/un"></label>
       <label class="text-[11px] font-bold">Valor unit R$<input type="text" inputmode="decimal" enterkeyhint="done" class="maya-input" value="${esc(it.unit)}" oninput="editItem(${i},'unit',this.value)"></label>
       <div class="flex items-end gap-1">
-        <button class="maya-btn-ghost text-xs px-2 py-2" title="Dica de preço p/ este item" aria-label="Dica de preço para este item" onclick="openCalc(${i})">Dica</button>
-        <button class="maya-btn-ghost text-xs px-2 py-2" title="Remover" aria-label="Remover item" onclick="delItem(${i})">Excluir</button>
+        <button class="maya-btn-ghost text-xs px-2 py-2" title="Dica de preço p/ este item" aria-label="Dica de preço para este item" ${onCall('openCalc', i)}>Dica</button>
+        <button class="maya-btn-ghost text-xs px-2 py-2" title="Remover" aria-label="Remover item" ${onCall('delItem', i)}>Excluir</button>
       </div>
     </div>
     <div class="text-right text-sm font-bold mt-1">Sub: <span class="row-sub">${brl((Number(it.qty)||0)*(Number(it.unit)||0))}</span></div>
@@ -549,7 +552,7 @@ function paintPaid(){ const box=document.querySelector('#paidbox'); if(!box||!Dr
   const badge = p.st==='pago'?'<span class="maya-badge b-aprovado">pago</span>':p.st==='parcial'?'<span class="maya-badge b-pendente">parcial</span>':'<span class="maya-badge b-expirado">em aberto</span>';
   box.innerHTML = `<div class="flex items-center gap-2 text-sm mb-1"><b>${brl(p.t)}</b><span style="color:var(--muted)">de ${brl(p.tot)}</span><div class="flex-1"></div>${badge}</div>
   <div class="p-track mb-2"><div class="p-bar" style="width:${p.pct.toFixed(0)}%"></div></div>
-  ${(Draft.paid.entries||[]).map((e,i)=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1">${fmtD(e.date)} • ${esc(e.method||'')}</div><b>${brl(e.value)}</b><button class="maya-btn-ghost text-xs px-2 py-1" onclick="reciboEntry(${i})">Recibo</button><button class="maya-btn-ghost text-xs px-2 py-1" onclick="delPayment(${i})">×</button></div>`).join('')||'<p class="text-xs mb-1" style="color:var(--muted)">Nenhum recebimento lançado.</p>'}
+  ${(Draft.paid.entries||[]).map((e,i)=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1">${fmtD(e.date)} • ${esc(e.method||'')}</div><b>${brl(e.value)}</b><button class="maya-btn-ghost text-xs px-2 py-1" ${onCall('reciboEntry', i)}>Recibo</button><button class="maya-btn-ghost text-xs px-2 py-1" ${onCall('delPayment', i)}>×</button></div>`).join('')||'<p class="text-xs mb-1" style="color:var(--muted)">Nenhum recebimento lançado.</p>'}
   ${p.rem>0.009&&p.tot>0?`<button class="maya-btn-ghost text-xs mt-1" onclick="payFull()">Quitar ${brl(p.rem)}</button>`:''}`; }
 window.addPayment=()=>{ recalcDraft();
   openModal('Registrar recebimento', MF.num('pm-value','Valor R$ *',paidRemaining(Draft).toFixed(2))+`<div class="f-row2">`+MF.date('pm-date','Data',todayISO())+MF.sel('pm-method','Forma',[['Pix','Pix'],['Dinheiro','Dinheiro'],['Cartão','Cartão'],['Transferência','Transferência'],['Boleto','Boleto']],'Pix')+`</div>`, ()=>{
@@ -863,10 +866,10 @@ window.calcNow = ()=>{
       <div class="text-xs font-bold opacity-80">PREÇO IDEAL SUGERIDO</div>
       <div class="hero-val">${brl(s.ideal)}</div>
       <div class="text-xs opacity-80">faixa saudável: ${brl(s.min)} – ${brl(s.max)}</div>
-      <button class="maya-btn w-full mt-2" style="background:rgba(255,255,255,.95);color:#145214" onclick="applyTip(${s.ideal})">Usar ${brl(s.ideal)} ✓</button>
+      <button class="maya-btn w-full mt-2" style="background:rgba(255,255,255,.95);color:#145214" ${onCall('applyTip', s.ideal)}>Usar ${brl(s.ideal)} ✓</button>
       <div class="result-minmax">
-        <button onclick="applyTip(${s.min})">mín ${brl(s.min)}</button>
-        <button onclick="applyTip(${s.max})">máx ${brl(s.max)}</button>
+        <button ${onCall('applyTip', s.min)}>mín ${brl(s.min)}</button>
+        <button ${onCall('applyTip', s.max)}>máx ${brl(s.max)}</button>
       </div>
     </div>
     <details class="calc-details"><summary>Por que esse valor?</summary>
@@ -938,7 +941,7 @@ window.quoteMore=id=>{
   const es=effStatus(b);
   openDrawer(`<h3 class="font-black text-lg">Orçamento Nº ${esc(b.number)}</h3>
     <p class="text-sm mb-3" style="color:var(--muted)">${esc(b.client?.name||'')} • ${brl(b.total)}</p>
-    <label class="text-xs font-bold">Status<select class="maya-select mt-1" onchange="setStatus('${b.id}',this.value);closeDrawer()">${['pendente','aprovado','recusado','expirado'].map(s=>`<option ${b.status===s?'selected':''}>${s}</option>`).join('')}</select></label>
+    <label class="text-xs font-bold">Status<select class="maya-select mt-1" ${attrEv('onchange', 'setStatus('+JSON.stringify(b.id)+',this.value);closeDrawer()')}>${['pendente','aprovado','recusado','expirado'].map(s=>`<option ${b.status===s?'selected':''}>${s}</option>`).join('')}</select></label>
     <div class="flex flex-col gap-2 mt-3">
       <a class="maya-btn w-full text-center" href="#/editar/${b.id}" onclick="closeDrawer()">Abrir / editar</a>
       <button class="maya-btn-ghost w-full" ${onThen('closeDrawer()', 'dupBudget', b.id)}>Duplicar</button>

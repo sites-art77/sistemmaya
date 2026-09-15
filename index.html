@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>MAYA Garden Pro — Orçamentos</title>
 <meta name="description" content="Gerador e gerenciador de orçamentos MAYA Garden — Jardinagem, Orquídeas, Paisagismo em Petrópolis-RJ"/>
-<meta name="maya-build" content="36"/>
+<meta name="maya-build" content="37"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -23,7 +23,14 @@
 <script src="jspdf.umd.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';document.head.appendChild(s)"></script>
 <script>
 window.__mayaErr=[];
-function __mayaShowErr(m){window.__mayaErr.push(m);var d=document.getElementById('errbox');if(d){d.style.display='block';d.textContent='Erro: '+window.__mayaErr.join(' | ').slice(0,400);}}
+function __mayaShowErr(m){
+  window.__mayaErr.push(m);
+  var d=document.getElementById('errbox');
+  if(d){
+    d.style.display='block';
+    d.innerHTML='Erro: '+window.__mayaErr.join(' | ').slice(0,400)+' <button type="button" style="margin-left:8px;font:700 12px sans-serif;background:#fff;color:#a11a1a;border:0;border-radius:8px;padding:4px 8px" onclick="this.parentNode.style.display=\'none\';window.__mayaErr=[]">Fechar</button>';
+  }
+}
 function __mayaNoise(m){
   m=String(m||'');
   return !m || m==='Script error.' || m==='Script error' || /script error/i.test(m) || /ResizeObserver loop/i.test(m) || /The operation was aborted/i.test(m) || /AbortError/i.test(m) || /NotAllowedError/i.test(m) || /cancelled|canceled/i.test(m);
@@ -53,8 +60,8 @@ window.addEventListener('DOMContentLoaded',function(){
 <script src="cloud.js?v=9"></script>
 <script src="pricing.js?v=7"></script>
 <script src="pdf.js?v=14"></script>
-<script src="app.js?v=36"></script>
-<script src="pro.js?v=21"></script>
+<script src="app.js?v=37"></script>
+<script src="pro.js?v=22"></script>
 <script src="reminders.js?v=5"></script>
 <script src="mobile-pdf.js?v=4"></script>
 <script>
