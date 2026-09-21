@@ -19,8 +19,13 @@ function sugerirPreco(inp){
   const cx = cxMult(inp.complexidade||'simples', p);
   const fq = freqMult(inp.freq||'mensal', p);
   const insumos = Number(inp.insumos||0);
-  const desloc = Number(inp.desloc||Store.settings.displacementDefault||0);
-  const margem = (100 + Number(p.marginPct||30))/100;
+  const deslocRaw = inp.desloc;
+  const desloc = (deslocRaw===undefined || deslocRaw===null || deslocRaw==='')
+    ? Number(Store.settings?.displacementDefault||0)
+    : Number(deslocRaw);
+  const marginPct = Number(p.marginPct);
+  const margemPct = Number.isFinite(marginPct) ? marginPct : 30;
+  const margem = (100 + margemPct)/100;
   let baseMin=0, baseIdeal=0, baseMax=0, memoria='';
 
   switch(inp.tipo){
@@ -59,14 +64,18 @@ function sugerirPreco(inp){
     }
     case 'projeto_m2':{
       const a = Number(inp.area||0);
-      baseMin = Math.max(2000, a*Number(p.projetoM2Min)); baseIdeal = Math.max(2000, a*Number(p.projetoM2Ideal)); baseMax = a*Number(p.projetoM2Max);
+      baseMin = Math.max(2000, a*Number(p.projetoM2Min));
+      baseIdeal = Math.max(2000, a*Number(p.projetoM2Ideal));
+      baseMax = Math.max(2000, a*Number(p.projetoM2Max));
+      if(baseIdeal < baseMin) baseIdeal = baseMin;
+      if(baseMax < baseIdeal) baseMax = baseIdeal;
       memoria = `${a}m² projeto (${p.projetoM2Min}/${p.projetoM2Ideal}/${p.projetoM2Max}), mínimo R$2000`;
       break;
     }
     default:{ // visita / genérico: custo + margem
       const custo = insumos + desloc + (Number(inp.horas||0)*Number(p.horaIdeal));
       baseIdeal = custo*margem; baseMin = custo*1.1; baseMax = custo*(margem+0.35);
-      memoria = `custo (insumos ${insumos}+desloc ${desloc}+horas) × margem ${p.marginPct}%`;
+      memoria = `custo (insumos ${insumos}+desloc ${desloc}+horas) × margem ${margemPct}%`;
     }
   }
   // soma insumos+desloc nos tipos por m²/hora/vaso (fora do genérico que já incluiu)
@@ -75,7 +84,7 @@ function sugerirPreco(inp){
     if(insumos+desloc>0) memoria += ` + insumos/desloc R$${insumos+desloc}`;
   }
   const r = v => Math.round(v);
-  return { min:r(baseMin), ideal:r(baseIdeal), max:r(baseMax), memoria, margemPct:Number(p.marginPct||30) };
+  return { min:r(baseMin), ideal:r(baseIdeal), max:r(baseMax), memoria, margemPct };
 }
 
 function avaliarPreco(valorDigitado, sugestao){

@@ -1298,10 +1298,13 @@ window.savePricing=()=>{
   const fields=$$('[id^="p-"]');
   for(const input of fields){
     const value=numBR(input.value);
-    if(!(value>0) || value>Number.MAX_SAFE_INTEGER/100){
+    const key=input.id.slice(2);
+    if(key==='marginPct'){
+      if(!(value>=0) || value>100){ toast('Informe uma margem entre 0 e 100.'); input.focus(); return; }
+    }else if(!(value>0) || value>Number.MAX_SAFE_INTEGER/100){
       toast('Informe um preço válido, maior que zero.'); input.focus(); return;
     }
-    p[input.id.slice(2)]=value;
+    p[key]=value;
   }
   for(const prefix of ['m2Manut','m2Impl','projetoM2']){
     if(p[prefix+'Min']>p[prefix+'Ideal'] || p[prefix+'Ideal']>p[prefix+'Max']){
