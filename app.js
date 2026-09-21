@@ -590,23 +590,34 @@ window.reciboEntry=async i=>{ collectSilent(); recalcDraft(); const e=Draft.paid
 window.delItem = i=>{ Draft.items.splice(i,1); if(!Draft.items.length) Draft.items.push({desc:'',qty:1,unitLabel:'un',unit:0}); window._dirty=true; recalcDraft(); paintItems(); paintEditorTotalsOnly(); paintPreviewOnly(); };
 
 function collectEditor(){
-  Draft.client.name = $('#f-name').value.trim();
-  Draft.client.phone = $('#f-phone').value.trim();
-  Draft.client.address = $('#f-addr').value.trim();
-  Draft.date = $('#f-date').value || todayISO();
-  Draft.validity = $('#f-valid').value || addDays(Draft.date, Store.settings.validityDays);
-  Draft.status = $('#f-status').value;
-  Draft.payMethod = $('#f-paymethod').value;
-  Draft.payParcels = Math.min(21, Math.max(1, numBR($('#f-parcels').value)||1));
+  if(!Draft) return;
+  maybeApplyM2();
+  const val = id => String((document.getElementById(id)||{}).value||'');
+  Draft.client.name = val('f-name').trim();
+  Draft.client.phone = val('f-phone').trim();
+  Draft.client.address = val('f-addr').trim();
+  Draft.date = val('f-date') || todayISO();
+  Draft.validity = val('f-valid') || addDays(Draft.date, Store.settings.validityDays);
+  Draft.status = val('f-status') || Draft.status || 'pendente';
+  Draft.payMethod = val('f-paymethod') || Draft.payMethod || 'Pix';
+  Draft.payParcels = Math.min(21, Math.max(1, numBR(val('f-parcels'))||1));
   Draft.payment = Draft.payMethod;
-  Draft.signalPct = numBR($('#f-signal').value);
-  Draft.notes = $('#f-notes').value;
-  Draft.serviceText = ($('#f-servicetext')||{}).value || '';
-  Draft.serviceValue = numBR(($('#f-servicevalue')||{}).value);
-  Draft.discount = numBR($('#f-desc').value);
-  Draft.discountType = $('#f-desct').value;
-  Draft.displacement = numBR($('#f-desloc').value);
+  Draft.signalPct = numBR(val('f-signal'));
+  Draft.notes = val('f-notes');
+  Draft.serviceText = val('f-servicetext');
+  Draft.serviceValue = numBR(val('f-servicevalue'));
+  Draft.discount = numBR(val('f-desc'));
+  Draft.discountType = val('f-desct') || Draft.discountType || 'pct';
+  Draft.displacement = numBR(val('f-desloc'));
   recalcDraft();
+}
+function maybeApplyM2(){
+  if(!Draft) return;
+  const area=numBR(($('#f-m2area')||{}).value);
+  const rate=numBR(($('#f-m2rate')||{}).value);
+  if(!(area>0) || !(rate>0)) return;
+  if(Number(Draft.serviceValue)>0) return;
+  applyM2();
 }
 function paintEditorTotalsOnly(){
   if(!Draft) return;
@@ -681,7 +692,7 @@ function paintPreviewOnly(){
       <div class="flex-1"><div class="pp-co">${esc(st.company)}</div>
       <div class="pp-tag">${esc(st.tagline)}</div>
       <div class="pp-tag" style="color:#666">${esc(st.address)} • Whats ${esc(st.whatsappDisplay)} • ${esc(st.instagram)}</div></div>
-      <div class="pp-meta"><div class="pp-num">Nº ${esc(Draft.number)}</div><div>Emissão ${fmtDate(Draft.date)}</div><div>Válida até ${fmtDate(Draft.validity)}</div><div style="margin-top:2px"><b>${esc(Draft.status.toUpperCase())}</b></div></div>
+      <div class="pp-meta"><div class="pp-num">Nº ${esc(Draft.number)}</div><div>Emissão ${fmtDate(Draft.date)}</div><div>Válida até ${fmtDate(Draft.validity)}</div><div style="margin-top:2px"><b>${esc(String(Draft.status||"pendente").toUpperCase())}</b></div></div>
     </div>
     <div class="pp-client"><b>Cliente:</b> ${esc(Draft.client.name||'-')} &nbsp;•&nbsp; ${esc(Draft.client.phone||'-')} &nbsp;•&nbsp; ${esc(Draft.client.address||'-')}</div>
     ${String(Draft.serviceText||'').trim()?`<div class="text-sm mt-2" style="white-space:pre-wrap;color:#222"><b>Escopo do serviço</b><br>${esc(Draft.serviceText)}</div>`:''}
@@ -711,6 +722,10 @@ window.persistDraft = async (opts={})=>{
   if(!Draft.createdAt) Draft.createdAt = new Date().toISOString();
   const all = (Store.budgets||[]).map(b=>({...b, photos:[]}));
   const ix = all.findIndex(b=>b.id===Draft.id);
+  if(ix<0){
+    const used=new Set(all.map(b=>String(b.number||'')));
+    if(!Draft.number || used.has(String(Draft.number))) Draft.number=Store.nextNumber();
+  }
   if(ix>=0) all[ix]=structuredClone(Draft); else all.push(structuredClone(Draft));
   try{ Store.budgets = all; }
   catch(e){ toast('Sem espaço no aparelho. Exclua orçamentos antigos e tente de novo.'); return false; }
@@ -842,6 +857,7 @@ const CALC_OPTS = [
   {v:'irrigacao', t:'Irrigação', s:'mangueira e aspersores', tipo:'irrigacao_m2', unit:'m²', def:50},
   {v:'hora', t:'Por hora', s:'serviço avulso', tipo:'hora', unit:'horas', def:4},
   {v:'vasos', t:'Orquídeas', s:'replantio por vaso', tipo:'vaso', unit:'vasos', def:10},
+  {v:'visitaorq', t:'Visita orquidário', s:'limpeza, adubo e fitossanitário', tipo:'visita_orq', unit:'', def:0},
   {v:'orquidario', t:'Orquidário', s:'projeto completo', tipo:'orquidario', unit:'', def:0},
   {v:'projeto', t:'Projeto', s:'paisagismo por m²', tipo:'projeto_m2', unit:'m²', def:50}
 ];
@@ -880,7 +896,7 @@ window.openCalc = (itemIndex)=>{
     <summary>Extras (frequência, insumos, deslocamento)</summary>
     <div class="calc-details-body grid grid-cols-2 gap-2 text-sm">
       <label id="c-freqbox" class="font-bold col-span-2">Frequência<select id="c-freq" class="maya-select"><option value="mensal">mensal</option><option value="quinzenal">quinzenal</option><option value="semanal">semanal</option><option value="unica">única</option></select></label>
-      <label class="font-bold">Insumos R$<input type="text" inputmode="decimal" enterkeyhint="done" id="c-ins" class="maya-input" value="80"></label>
+      <label class="font-bold">Insumos R$<input type="text" inputmode="decimal" enterkeyhint="done" id="c-ins" class="maya-input" value="0"></label>
       <label class="font-bold">Desloc. R$<input type="text" inputmode="decimal" enterkeyhint="done" id="c-des" class="maya-input" value="${esc(st.displacementDefault)}"></label>
     </div>
   </details>
@@ -971,6 +987,7 @@ function quoteActionCard(b){
     </a>
     <div class="quote-card-actions">
       <button type="button" class="maya-btn" ${onCall('pdfBudget', b.id)}>PDF</button>
+      <button type="button" class="maya-btn-ghost" ${onCall('openZapBudget', b.id)}>WhatsApp</button>
       <a class="maya-btn-ghost" href="#/editar/${b.id}">Alterar</a>
       ${wait?`<button type="button" class="maya-btn-ghost" ${onCall('setStatus', b.id, 'aprovado')}>Aprovado</button>
       <button type="button" class="maya-btn-ghost" ${onCall('setStatus', b.id, 'recusado')}>Recusado</button>`:''}
@@ -1012,7 +1029,7 @@ window.renderList = ()=>{
   const ok=arr.filter(b=>effStatus(b)==='aprovado');
   const no=arr.filter(b=>effStatus(b)==='recusado'||effStatus(b)==='expirado');
   box.innerHTML =
-    quoteSection('Aguardando decisão', 'PDFs já gerados. Marque aprovado, recusado, altere ou apague.', wait) +
+    quoteSection('Aguardando decisão', 'Salvos. PDF, WhatsApp, alterar, aprovar, recusar ou apagar.', wait) +
     quoteSection('Aprovados', '', ok) +
     quoteSection('Recusados e expirados', '', no);
 };
@@ -1029,7 +1046,7 @@ window.quoteMore=id=>{
       <button class="maya-btn-ghost w-full" onclick="closeDrawer()">Fechar</button>
     </div>`);
 };
-window.dupBudget = id=>{ const b=(Store.budgets||[]).find(x=>x.id===id); if(!b) return; const c=structuredClone(b); c.id=Store.uid(); c.number=Store.nextNumber(); c.status='pendente'; c.date=todayISO(); c.validity=addDays(todayISO(), Number(Store.settings.validityDays||15)); c.paid={entries:[]}; delete c.contractId; c.createdAt=new Date().toISOString(); const a=Store.budgets; a.push(c); Store.budgets=a; toast('Duplicado como '+c.number); renderList(); };
+window.dupBudget = id=>{ const b=(Store.budgets||[]).find(x=>x.id===id); if(!b) return; const c=structuredClone(b); c.id=Store.uid(); c.number=Store.nextNumber(); c.status='pendente'; c.date=todayISO(); c.validity=addDays(todayISO(), Number(Store.settings.validityDays||15)); c.paid={entries:[]}; delete c.contractId; c.createdAt=new Date().toISOString(); const a=Store.budgets; a.push(c); Store.budgets=a; toast('Duplicado como '+c.number); if((location.hash||'').startsWith('#/orcamentos')) renderList(); else render(); };
 window.setStatus = (id,s)=>{
   const a=Store.budgets||[];
   const b=a.find(x=>x.id===id);
@@ -1050,7 +1067,7 @@ window.delBudget = async id=>{
   else if(typeof renderList==='function') renderList();
   else render();
 };
-window.pdfBudget = async id=>{ const b=(Store.budgets||[]).find(x=>x.id===id); toast('Gerando PDF…'); await gerarPDF(normItems(structuredClone(b))); };
+window.pdfBudget = async id=>{ const b=(Store.budgets||[]).find(x=>x.id===id); if(!b){ toast('Orçamento não encontrado.'); return; } toast('Gerando PDF…'); await gerarPDF(normItems(structuredClone(b))); };
 window.zapBudget = id=>{ const b=(Store.budgets||[]).find(x=>x.id===id); navigator.clipboard?.writeText(zapFill(b)).then(()=>toast('Msg copiada! Anexe o PDF.')); };
 
 /* ---------- clientes ---------- */

@@ -86,6 +86,13 @@ function sugerirPreco(inp){
       memoria = `orquidário base (${p.orquidarioMin}/${p.orquidarioIdeal}/${p.orquidarioMax}) × cx ${cx}`;
       break;
     }
+    case 'visita_orq':{
+      baseMin = rateOf(p,'visitaOrqMin',null,120)*cx;
+      baseIdeal = rateOf(p,'visitaOrqIdeal',null,180)*cx;
+      baseMax = rateOf(p,'visitaOrqMax',null,280)*cx;
+      memoria = `visita ao orquidário (${p.visitaOrqMin}/${p.visitaOrqIdeal}/${p.visitaOrqMax}) × padrão ${cx}`;
+      break;
+    }
     case 'projeto_m2':{
       const a = Number(inp.area||0);
       baseMin = Math.max(2000, a*Number(p.projetoM2Min));

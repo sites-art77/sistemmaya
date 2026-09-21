@@ -140,6 +140,8 @@ const irrig = ctx.sugerirPreco({ tipo:'irrigacao_m2', area:50, desloc:0, insumos
 eq(irrig.ideal, 1500, '50 m² de irrigação × R$ 30');
 const premiumG = ctx.sugerirPreco({ tipo:'grama_m2', area:80, desloc:0, insumos:0, complexidade:'premium' });
 ok(premiumG.ideal > grama.ideal, 'premium aumenta corte de grama');
+const visita = ctx.sugerirPreco({ tipo:'visita_orq', desloc:0, insumos:0, complexidade:'simples' });
+eq(visita.ideal, 180, 'visita orquidário usa preço de visita');
 
 const appCode = fs.readFileSync(path.join(root, 'app.js'), 'utf8') + `
 window.__setDraft = function(d){ Draft = d; };
@@ -246,5 +248,23 @@ field('p-m2ImplMax','350');
 ctx.__toasts.length = 0;
 ctx.savePricing();
 ok(ctx.__toasts.some(t=>/piso e o teto/i.test(t)), 'rejeita piso > preço');
+
+eq(ctx.numBR('45,50'), 45.5, 'numBR vírgula');
+eq(ctx.numBR('1.234,56'), 1234.56, 'numBR milhar');
+
+ctx.__setDraft(ctx.normItems(ctx.blankBudget()));
+ctx.__getDraft().quoteMode='livre';
+ctx.__getDraft().client={name:'Ana',phone:'24988887777',address:''};
+ctx.__getDraft().serviceValue=0;
+ctx.__getDraft().serviceText='';
+['f-name','f-phone','f-addr','f-date','f-valid','f-status','f-paymethod','f-parcels','f-signal','f-notes','f-desc','f-desct','f-desloc','f-servicetext','f-servicevalue','f-m2tipo','f-m2area','f-m2rate']
+  .forEach(id=>{ const n=nodes.get(id)||makeNode(id); n.value=''; });
+field('f-name','Ana'); field('f-phone','24988887777'); field('f-status','pendente');
+field('f-paymethod','Pix'); field('f-parcels','1'); field('f-desct','pct');
+field('f-m2tipo','irrig'); field('f-m2area','20'); field('f-m2rate','30');
+field('f-servicevalue','0'); field('f-servicetext','');
+ctx.persistDraft({goList:false});
+eq(ctx.__getDraft().serviceValue, 600, 'salvar aplica m² se o valor ainda é zero');
+ok(String(ctx.__getDraft().serviceText).includes('Irrigação'), 'salvar grava a linha de irrigação');
 
 console.log('landscaping.cjs ok');

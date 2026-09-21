@@ -86,7 +86,7 @@ function dashProHTML(){
   return `
   ${heroHtml}
   ${dueHtml}
-  ${pend.length?`<div class="maya-card p-4 mb-3 anim-in"><div class="quote-board-h"><h2>Aguardando decisão <span>${pend.length}</span></h2><p>PDFs gerados. Aprove, recuse, altere ou apague.</p></div>
+  ${pend.length?`<div class="maya-card p-4 mb-3 anim-in"><div class="quote-board-h"><h2>Aguardando decisão <span>${pend.length}</span></h2><p>Salvos. Aprove, recuse, altere, envie no WhatsApp ou apague.</p></div>
     <div class="grid md:grid-cols-2 gap-3">${pend.slice(0,4).map(quoteActionCard).join('')}</div>
     ${pend.length>4?`<a class="text-sm font-bold mt-2 inline-block" style="color:var(--maya-accent)" href="#/orcamentos">Ver todos →</a>`:''}
   </div>`:''}
@@ -97,7 +97,7 @@ function dashProHTML(){
   <div class="dashboard-kpis grid grid-cols-2 md:grid-cols-4 gap-2">
     ${kpi('Faturado no mês','k-fat',fatM,1)}${kpi('Recebido no mês','k-rec',recMes,1)}
     ${kpi('A receber','k-arec',aReceber,1)}${kpi('Ticket médio','k-tick',ticket,1)}
-    ${kpi('Potencial pendente','k-pend',pendV,1)}${kpi('Retomar contato','k-fol',follows.length,0)}
+    ${kpi('Aguardando','k-pend',pendV,1)}${kpi('Parados 5+ dias','k-fol',follows.length,0)}
   </div>
   <div class="grid lg:grid-cols-5 gap-3 mt-3">
     <div class="maya-card p-4 anim-in lg:col-span-3"><h2 class="font-extrabold mb-1">Receita aprovada — últimos 6 meses</h2>${svgBars(months)}</div>
@@ -112,8 +112,8 @@ function dashProHTML(){
       ${upcoming.length?upcoming.map(v=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1"><b>${fmtD(v.date)}</b> ${esc(v.time||'')} — ${esc(v.client)}<div class="text-xs" style="color:var(--muted)">${esc(v.service||'')}</div></div><button class="maya-btn-ghost text-xs px-2 py-1" ${onCall('toggleVisit', v.id)}>✓</button></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Sem visitas agendadas. <a class="font-bold" style="color:var(--maya-accent)" href="#/agenda">Agendar →</a></p>'}
     </div>
   </div>
-  <div class="maya-card p-4 mt-3 anim-in"><h2 class="font-extrabold mb-2">Retomar contato <span class="text-xs font-normal" style="color:var(--muted)">pendentes há 5+ dias</span></h2>
-    ${follows.length?follows.slice(0,5).map(b=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1"><b>${esc(b.client?.name)}</b> <span style="color:var(--muted)">há ${ageDays(b)} dias • ${brl(b.total)}</span></div><button class="maya-btn-ghost text-xs px-2 py-1" ${onCall('copyFollow', b.id)}>Copiar</button><button class="maya-btn-ghost text-xs px-2 py-1" ${onCall('openFollowZap', b.id)}>WhatsApp</button><a class="maya-btn-ghost text-xs px-2 py-1" href="#/editar/${b.id}">Abrir</a></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Nenhum orçamento parado. Bom ritmo.</p>'}
+  <div class="maya-card p-4 mt-3 anim-in"><h2 class="font-extrabold mb-2">Orçamentos parados <span class="text-xs font-normal" style="color:var(--muted)">pendentes há 5+ dias</span></h2>
+    ${follows.length?follows.slice(0,5).map(b=>`<div class="flex items-center gap-2 text-sm border-b py-1" style="border-color:var(--line)"><div class="flex-1"><b>${esc(b.client?.name)}</b> <span style="color:var(--muted)">há ${ageDays(b)} dias • ${brl(b.total)}</span></div><button class="maya-btn-ghost text-xs px-2 py-1" ${onCall('copyFollow', b.id)}>Copiar</button><button class="maya-btn-ghost text-xs px-2 py-1" ${onCall('openFollowZap', b.id)}>WhatsApp</button><a class="maya-btn-ghost text-xs px-2 py-1" href="#/editar/${b.id}">Abrir</a></div>`).join(''):'<p class="text-xs" style="color:var(--muted)">Nenhum orçamento parado.</p>'}
   </div>`;
 }
 function dashAfter(){
