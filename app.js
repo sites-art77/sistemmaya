@@ -288,7 +288,7 @@ function viewDashboardLegacy(){
 function afterRender(r){
   watchKeyboard();
   if(r==='#/'||r===''){ sweepExpired(); if(window.dashAfter) dashAfter(); }
-  if(r.startsWith('#/novo')||r.startsWith('#/editar')){ recalcDraft(); window.__lastTot = Draft.total; paintEditorTotals(); paintPreview(); applyWmVars(); paintPaid(); toggleParcels(); applyQuoteMode(); }
+  if(r.startsWith('#/novo')||r.startsWith('#/editar')){ recalcDraft(); window.__lastTot = Draft.total; paintEditorTotals(); paintPreview(); applyWmVars(); paintPaid(); toggleParcels(); applyQuoteMode(); hintM2(); }
   if(r.startsWith('#/orcamentos') && window.renderList){ try{ renderList(); }catch(e){ console.warn(e); } }
   if(r.startsWith('#/relatorios') && window.repAfter){ try{ repAfter(); }catch(e){} }
 }
@@ -326,34 +326,50 @@ if(!window._mayaSaveKey){
 function m2Services(){
   const p = Store.pricing||{};
   return [
-    {k:'proj', t:'Projeto paisagístico', rate:Number(p.projetoM2Ideal||40)},
-    {k:'impl', t:'Implantação de jardim', rate:Number(p.m2ImplIdeal||180)}
+    {k:'proj', t:'Projeto paisagístico', rate:Number(p.projetoM2Ideal??40)},
+    {k:'impl', t:'Implantação de jardim', rate:Number(p.m2ImplIdeal??180)}
   ];
 }
 window.applyM2 = function(){
-  if(!Draft) return;
+  if(!Draft || window.MayaAuth?.canWrite?.()===false) return;
   const tipo = ($('#f-m2tipo')||{}).value;
   const area = numBR(($('#f-m2area')||{}).value);
+  const rate = numBR(($('#f-m2rate')||{}).value);
   const svc = m2Services().find(x=>x.k===tipo) || m2Services()[0];
   if(!(area>0)){ toast('Informe a área em m²'); $('#f-m2area')?.focus(); return; }
-  const val = Math.round(area * Number(svc.rate) * 100)/100;
+  if(!(rate>0)){ toast('Informe um preço por m² maior que zero'); $('#f-m2rate')?.focus(); return; }
+  const val = Math.round(area * rate * 100)/100;
+  if(!Number.isFinite(val) || val>Number.MAX_SAFE_INTEGER/100){ toast('Área ou preço muito alto. Confira os valores.'); return; }
   Draft.serviceValue = val;
   const inp = $('#f-servicevalue'); if(inp) inp.value = val;
-  const line = svc.t+' — '+area+' m² × '+brl(svc.rate)+'/m²';
+  const line = svc.t+' — '+area.toLocaleString('pt-BR', {maximumFractionDigits:10})+' m² × '+brl(rate)+'/m²';
   const tx = $('#f-servicetext');
   if(tx){
     const cur = String(tx.value||'').trim();
-    tx.value = cur ? cur+'\n'+line : line;
+    const lines = cur ? cur.split('\n') : [];
+    const previous = Draft.landscaping?.line;
+    const idx = previous ? lines.indexOf(previous) : -1;
+    if(idx>=0) lines[idx]=line; else lines.push(line);
+    tx.value = lines.join('\n');
     Draft.serviceText = tx.value;
   }
+  Draft.landscaping = {type:svc.k, area, rate, line};
   window._dirty = true;
   recalcDraft(); paintEditorTotalsOnly(); paintPreviewOnly();
-  toast(area+' m² × '+brl(svc.rate)+' = '+brl(val));
+  toast(area+' m² × '+brl(rate)+' = '+brl(val));
 };
-window.hintM2 = function(){
+window.hintM2 = function(resetRate=false){
   const tipo = ($('#f-m2tipo')||{}).value;
   const svc = m2Services().find(x=>x.k===tipo);
-  const h = $('#m2-hint'); if(h && svc) h.textContent = svc.t+': '+brl(svc.rate)+' por m²';
+  if(!svc) return;
+  const input = $('#f-m2rate');
+  if(resetRate && input) input.value=svc.rate;
+  const area=numBR($('#f-m2area')?.value), rate=numBR(input?.value);
+  const total=Math.round(area*rate*100)/100;
+  const h = $('#m2-hint');
+  if(h) h.textContent = area>0 && rate>0 && Number.isFinite(total) && total<=Number.MAX_SAFE_INTEGER/100
+    ? area.toLocaleString('pt-BR', {maximumFractionDigits:10})+' m² × '+brl(rate)+' = '+brl(total)+' · Clique em Aplicar valor.'
+    : 'Informe a área e o preço por m² para calcular.';
 };
 
 /* ---------- Editor ---------- */
@@ -361,6 +377,9 @@ function statusOpts(s){ return ['pendente','aprovado','recusado','expirado'].map
 
 function viewEditor(isEdit){
   const d = Draft; const st = Store.settings;
+  const services = m2Services();
+  const landscaping = d.landscaping || {};
+  const service = services.find(s=>s.k===landscaping.type) || services[0];
   return `
   <div class="budget-editor">
   <div class="budget-editor-top flex items-center gap-2 mb-3 flex-wrap anim-in">
@@ -402,12 +421,15 @@ function viewEditor(isEdit){
         <div class="m2-box mt-3">
           <div class="text-xs font-extrabold mb-1">Paisagismo por m²</div>
           <p class="text-xs mb-2" style="color:var(--muted)">Só projeto e implantação. Grama e manutenção ficam no valor do serviço.</p>
-          <select id="f-m2tipo" class="maya-select mb-2" onchange="hintM2()">${m2Services().map(s=>`<option value="${s.k}">${esc(s.t)} — ${brl(s.rate)}/m²</option>`).join('')}</select>
+          <label class="text-xs font-bold">Tipo de serviço<select id="f-m2tipo" class="maya-select mb-2" onchange="hintM2(true)">${services.map(s=>`<option value="${s.k}" ${s.k===service.k?'selected':''}>${esc(s.t)}</option>`).join('')}</select></label>
           <div class="grid grid-cols-2 gap-2">
-            <input type="text" inputmode="decimal" enterkeyhint="done" id="f-m2area" class="maya-input" placeholder="Área em m²" onkeydown="if(event.key==='Enter'){event.preventDefault();applyM2()}">
-            <button type="button" class="maya-btn" onclick="applyM2()">Aplicar</button>
+            <label class="text-xs font-bold">Área em m²<input type="text" inputmode="decimal" enterkeyhint="done" id="f-m2area" class="maya-input" value="${esc(landscaping.area??'')}" placeholder="Ex: 80" onkeydown="if(event.key==='Enter'){event.preventDefault();applyM2()}"></label>
+            <label class="text-xs font-bold">Preço por m² (R$)<input type="text" inputmode="decimal" enterkeyhint="done" id="f-m2rate" class="maya-input" value="${esc(landscaping.rate??service.rate)}" placeholder="Ex: 45,50" onkeydown="if(event.key==='Enter'){event.preventDefault();applyM2()}"></label>
           </div>
-          <div class="text-xs mt-1" id="m2-hint" style="color:var(--muted)">${esc(m2Services()[0].t)}: ${brl(m2Services()[0].rate)} por m²</div>
+          <div class="text-xs mt-2" id="m2-hint" role="status" aria-live="polite" style="color:var(--muted)">Informe a área e o preço por m² para calcular.</div>
+          <button type="button" class="maya-btn w-full mt-2" onclick="applyM2()">Aplicar valor ao serviço</button>
+          <button type="button" class="maya-btn-ghost text-sm w-full mt-2" onclick="hintM2(true)">Usar preço padrão</button>
+          <p class="text-xs mt-2" style="color:var(--muted)">Aplicar substitui o valor do serviço. O preço editado vale só para este orçamento. Altere o padrão em Configurações → Preços por metro quadrado.</p>
         </div>
         <button class="maya-btn-ghost text-sm w-full mt-2" onclick="openCalc(null)">Quanto cobrar?</button>
         <div id="tip-last" class="text-xs mt-1" style="color:var(--muted)"></div>
@@ -616,7 +638,11 @@ function collectSilent(){
   }catch{}
 }
 ['f-name','f-phone','f-addr','f-date','f-valid','f-status','f-paymethod','f-parcels','f-signal','f-notes','f-desc','f-desct','f-desloc'].forEach(()=>{});
-document.addEventListener('input', e=>{ if(e.target && /^(f-)/.test(e.target.id||'')){ window._dirty=true; recalcDraftSilent(); } });
+document.addEventListener('input', e=>{
+  const id=e.target?.id||'';
+  if(id.startsWith('f-m2')){ hintM2(); return; }
+  if(id.startsWith('f-')){ window._dirty=true; recalcDraftSilent(); }
+});
 document.addEventListener('focusout', e=>{
   const id=(e.target&&e.target.id)||'';
   if(id==='f-phone'||id==='mc-phone'||id==='co-phone'){
@@ -625,7 +651,13 @@ document.addEventListener('focusout', e=>{
     else if(d.length===10) e.target.value=`(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;
   }
 });
-function recalcDraftSilent(){ if(!Draft||!$('#t-tot')) return; collectSilent(); recalcDraft(); paintEditorTotalsOnly(); paintPreviewOnly(); }
+let previewTimer;
+function recalcDraftSilent(){
+  if(!Draft||!$('#t-tot')) return;
+  collectSilent(); recalcDraft(); paintEditorTotalsOnly();
+  clearTimeout(previewTimer);
+  previewTimer=setTimeout(paintPreviewOnly, 120);
+}
 
 function applyWmVars(){
   const st = Store.settings;
@@ -635,6 +667,7 @@ function applyWmVars(){
   paper.style.setProperty('--wm-opacity', String(st.wmEnabled? Number(st.wmOpacity??.09):0));
 }
 function paintPreviewOnly(){
+  clearTimeout(previewTimer);
   const box = $('#preview'); if(!box||!Draft) return;
   const st = Store.settings;
   box.innerHTML = `
@@ -1259,7 +1292,26 @@ window.saveSettings=()=>{
   st.wmOpacity=numBR($('#s-wmOpacity').value)||0.09; st.wmSizePct=numBR($('#s-wmSizePct').value)||60; st.wmEnabled=$('#s-wmEnabled').value==='1';
   Store.settings=st; toast('Empresa salva!'); render();
 };
-window.savePricing=()=>{ if(!window.MayaAuth?.canWrite?.()){ toast('Acesso somente para visualização.'); return; } const p=Store.pricing; $$('[id^="p-"]').forEach(i=>{ p[i.id.slice(2)]=numBR(i.value); }); Store.pricing=p; toast('Preços salvos!'); };
+window.savePricing=()=>{
+  if(!window.MayaAuth?.canWrite?.()){ toast('Acesso somente para visualização.'); return; }
+  const p=Store.pricing;
+  const fields=$$('[id^="p-"]');
+  for(const input of fields){
+    const value=numBR(input.value);
+    if(!(value>0) || value>Number.MAX_SAFE_INTEGER/100){
+      toast('Informe um preço válido, maior que zero.'); input.focus(); return;
+    }
+    p[input.id.slice(2)]=value;
+  }
+  for(const prefix of ['m2Manut','m2Impl','projetoM2']){
+    if(p[prefix+'Min']>p[prefix+'Ideal'] || p[prefix+'Ideal']>p[prefix+'Max']){
+      toast('O preço deve ficar entre o piso e o teto. Confira os três valores.');
+      $('#p-'+prefix+'Ideal')?.focus(); return;
+    }
+  }
+  Store.pricing=p;
+  toast('Preços padrão salvos! Orçamentos existentes mantêm seus valores.');
+};
 
 /* ---------- backup local ---------- */
 window.exportBackup=()=>{
