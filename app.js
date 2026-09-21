@@ -325,9 +325,13 @@ if(!window._mayaSaveKey){
 
 function m2Services(){
   const p = Store.pricing||{};
+  const n = (a,b,fb)=>{ const v=Number(p[a]); if(v>0) return v; const w=Number(p[b]); return w>0?w:fb; };
   return [
-    {k:'proj', t:'Projeto paisagístico', rate:Number(p.projetoM2Ideal??40)},
-    {k:'impl', t:'Implantação de jardim', rate:Number(p.m2ImplIdeal??180)}
+    {k:'grama', t:'Corte de grama', rate:n('m2GramaIdeal','m2Grama',8)},
+    {k:'manut', t:'Manutenção / limpeza', rate:n('m2ManutIdeal',null,6.5)},
+    {k:'impl', t:'Implantação de jardim', rate:n('m2ImplIdeal',null,180)},
+    {k:'irrig', t:'Irrigação', rate:n('m2IrrigacaoIdeal','m2Irrigacao',30)},
+    {k:'proj', t:'Projeto paisagístico', rate:n('projetoM2Ideal',null,40)}
   ];
 }
 window.applyM2 = function(){
@@ -419,8 +423,8 @@ function viewEditor(isEdit){
         <textarea id="f-servicetext" class="maya-textarea free-scope" rows="10" placeholder="Ex: Limpeza completa do jardim, poda das cercas-vivas, capina dos canteiros, adubação e varrição. Material incluso. Execução em 1 dia.">${esc(d.serviceText||'')}</textarea>
         <label class="text-xs font-bold block mt-2">Valor do serviço R$<input type="text" inputmode="decimal" enterkeyhint="done" id="f-servicevalue" class="maya-input" value="${esc(d.serviceValue||0)}" placeholder="0"></label>
         <div class="m2-box mt-3">
-          <div class="text-xs font-extrabold mb-1">Paisagismo por m²</div>
-          <p class="text-xs mb-2" style="color:var(--muted)">Só projeto e implantação. Grama e manutenção ficam no valor do serviço.</p>
+          <div class="text-xs font-extrabold mb-1">Calcular por m²</div>
+          <p class="text-xs mb-2" style="color:var(--muted)">Grama, manutenção, implantação, irrigação ou projeto. O preço por m² deste orçamento é editável — não muda o padrão da empresa.</p>
           <label class="text-xs font-bold">Tipo de serviço<select id="f-m2tipo" class="maya-select mb-2" onchange="hintM2(true)">${services.map(s=>`<option value="${s.k}" ${s.k===service.k?'selected':''}>${esc(s.t)}</option>`).join('')}</select></label>
           <div class="grid grid-cols-2 gap-2">
             <label class="text-xs font-bold">Área em m²<input type="text" inputmode="decimal" enterkeyhint="done" id="f-m2area" class="maya-input" value="${esc(landscaping.area??'')}" placeholder="Ex: 80" onkeydown="if(event.key==='Enter'){event.preventDefault();applyM2()}"></label>
@@ -832,8 +836,10 @@ window.addFromCatalog = id=>{
 /* calculadora + dica */
 /* calculadora + dica — simples: 1 serviço, 2 tamanho, 3 padrão */
 const CALC_OPTS = [
+  {v:'grama', t:'Corte de grama', s:'roçada e aparo por m²', tipo:'grama_m2', unit:'m²', def:80},
   {v:'manutencao', t:'Manutenção', s:'limpeza, grama, poda', tipo:'manutencao_m2', unit:'m²', def:50, freq:true},
   {v:'implantar', t:'Implantar jardim', s:'jardim novo completo', tipo:'implantacao_m2', unit:'m²', def:30},
+  {v:'irrigacao', t:'Irrigação', s:'mangueira e aspersores', tipo:'irrigacao_m2', unit:'m²', def:50},
   {v:'hora', t:'Por hora', s:'serviço avulso', tipo:'hora', unit:'horas', def:4},
   {v:'vasos', t:'Orquídeas', s:'replantio por vaso', tipo:'vaso', unit:'vasos', def:10},
   {v:'orquidario', t:'Orquidário', s:'projeto completo', tipo:'orquidario', unit:'', def:0},
@@ -1086,7 +1092,7 @@ function viewCatalog(){
     <button class="maya-btn text-sm" onclick="addCat()">+ Item</button>
     <button class="maya-btn-ghost text-sm" onclick="addPackage()">+ Pacote</button>
   </div>
-  <p class="text-sm mb-2" style="color:var(--muted)">Toque em um serviço para editar nome, unidade e preço. Isso entra no orçamento.</p>
+  <p class="text-sm mb-2" style="color:var(--muted)">Toque no serviço para editar nome, unidade e preço. Esse preço é do catálogo — no orçamento você ainda pode mudar. Padrões por m² e hora ficam em Configurações.</p>
   <input id="cat-q" class="maya-input cat-search" placeholder="Buscar serviço…" value="${esc(window._catQ||'')}" oninput="typeCatQ(this.value)">
   <div class="cat-pills">${pill('','Todos',all.length)}${cats.map(c=>pill(c,c,all.filter(x=>x.cat===c).length)).join('')}</div>
   <div class="maya-card p-3 mb-3 anim-in">
@@ -1168,6 +1174,20 @@ function viewAdmin(){
   if(!window.MayaAuth?.isAdmin()) return `<h1 class="text-2xl font-black mb-3">Administração</h1><div class="maya-card p-4"><b>Acesso restrito</b><p class="text-sm mt-1">Somente o administrador pode gerenciar logins, perfis e expirações.</p></div>`;
   return `<h1 class="text-2xl font-black mb-3 anim-in">Administração de acessos</h1><p class="text-sm mb-3" style="color:var(--muted)">Controle quem entra no sistema. Deixe a data vazia para um acesso infinito.</p>${window.CloudSync?.adminHtml?window.CloudSync.adminHtml():'<div class="maya-card p-4">Carregando acessos…</div>'}`;
 }
+function priceGroupHTML(p, disabled, spec){
+  const {name, help, where, unit, ideal, min, max} = spec;
+  const u = unit?(' '+unit):'';
+  return `<div class="price-group">
+    <b>${esc(name)}</b>
+    <p class="price-help">${esc(help)}</p>
+    <p class="price-where">${esc(where)}</p>
+    <div class="price-trio ${min?'':'one'}">
+      ${min?`<label>Piso${u}<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-${min}" class="maya-input" value="${esc(p[min]??'')}"></label>`:''}
+      <label>${min?'Você cobra':'Valor'}${u}<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-${ideal}" class="maya-input" value="${esc(p[ideal]??'')}"></label>
+      ${max?`<label>Teto${u}<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-${max}" class="maya-input" value="${esc(p[max]??'')}"></label>`:''}
+    </div>
+  </div>`;
+}
 function viewConfig(){
   const st=Store.settings, p=Store.pricing, write=window.MayaAuth?.canWrite?.()!==false, disabled=write?'':'disabled';
   return `<h1 class="text-2xl font-black mb-3 anim-in">Configurações</h1>
@@ -1179,22 +1199,14 @@ function viewConfig(){
   </div>
   <div class="maya-card p-4 mb-3 anim-in" style="opacity:1">
     <h2 class="font-extrabold mb-1">Preços por metro quadrado</h2>
-    <p class="text-xs mb-3" style="color:var(--muted)">Quanto você cobra por m². O orçamento usa o valor <b>Você cobra</b> no cálculo. Piso = não cobrar menos. Teto = não passar disso.</p>
+    <p class="text-xs mb-3" style="color:var(--muted)"><b>Você cobra</b> é o padrão no orçamento (Calcular por m²). Pode mudar o valor na hora, só naquele orçamento. <b>Piso</b> e <b>Teto</b> são a faixa da dica Quanto cobrar?. Itens do catálogo têm preço próprio em Catálogo — também editável.</p>
     ${[
-      ['Corte de grama','Roçada e aparo. Ex: 80 m² × R$ 8 = R$ 640.','m2Grama',null,null],
-      ['Manutenção / limpeza','Corte, capina, varrição e acabamento do jardim.','m2ManutIdeal','m2ManutMin','m2ManutMax'],
-      ['Implantação de jardim','Fazer o jardim do zero: terra, plantio e grama.','m2ImplIdeal','m2ImplMin','m2ImplMax'],
-      ['Irrigação','Mangueira, aspersores e instalação simples.','m2Irrigacao',null,null],
-      ['Projeto paisagístico','Desenho do jardim, espécies e memorial.','projetoM2Ideal','projetoM2Min','projetoM2Max']
-    ].map(([name,help,ideal,min,max])=>`<div class="price-group">
-      <b>${name}</b>
-      <p class="price-help">${help}</p>
-      <div class="price-trio ${min?'':'one'}">
-        ${min?`<label>Piso R$/m²<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-${min}" class="maya-input" value="${esc(p[min])}"></label>`:''}
-        <label>Você cobra R$/m²<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-${ideal}" class="maya-input" value="${esc(p[ideal])}"></label>
-        ${max?`<label>Teto R$/m²<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-${max}" class="maya-input" value="${esc(p[max])}"></label>`:''}
-      </div>
-    </div>`).join('')}
+      {name:'Corte de grama', help:'Roçada e aparo. Ex: 80 m² × R$ 8 = R$ 640.', where:'Orçamento → Calcular por m² e dica Quanto cobrar? → Corte de grama.', unit:'R$/m²', ideal:'m2GramaIdeal', min:'m2GramaMin', max:'m2GramaMax'},
+      {name:'Manutenção / limpeza', help:'Corte, capina, varrição e acabamento do jardim.', where:'Orçamento → Calcular por m² e dica → Manutenção.', unit:'R$/m²', ideal:'m2ManutIdeal', min:'m2ManutMin', max:'m2ManutMax'},
+      {name:'Implantação de jardim', help:'Fazer o jardim do zero: terra, plantio e grama.', where:'Orçamento → Calcular por m² e dica → Implantar jardim.', unit:'R$/m²', ideal:'m2ImplIdeal', min:'m2ImplMin', max:'m2ImplMax'},
+      {name:'Irrigação', help:'Mangueira, aspersores e instalação simples.', where:'Orçamento → Calcular por m² e dica → Irrigação.', unit:'R$/m²', ideal:'m2IrrigacaoIdeal', min:'m2IrrigacaoMin', max:'m2IrrigacaoMax'},
+      {name:'Projeto paisagístico', help:'Desenho do jardim, espécies e memorial. Projeto pequeno não sai por menos de R$ 2.000.', where:'Orçamento → Calcular por m² e dica → Projeto.', unit:'R$/m²', ideal:'projetoM2Ideal', min:'projetoM2Min', max:'projetoM2Max'}
+    ].map(spec=>priceGroupHTML(p, disabled, spec)).join('')}
     <button ${disabled} class="maya-btn mt-3 w-full" onclick="savePricing()">Salvar preços por m²</button>
   </div>
   <div class="grid lg:grid-cols-2 gap-3">
@@ -1216,48 +1228,28 @@ function viewConfig(){
     <button ${disabled} class="maya-btn mt-3" onclick="saveSettings()">Salvar empresa</button>
   </div>
   <div class="maya-card p-4 anim-in" style="opacity:1">
-    <h2 class="font-extrabold mb-1">Outros preços (dica Quanto cobrar?)</h2>
-    <p class="text-xs mb-3" style="color:var(--muted)">Usados quando você toca em <b>Quanto cobrar?</b> no orçamento. Piso = menor valor. Você cobra = sugestão. Teto = não passar disso.</p>
+    <h2 class="font-extrabold mb-1">Preços que não são por m²</h2>
+    <p class="text-xs mb-3" style="color:var(--muted)">Todos editáveis. Usados na dica <b>Quanto cobrar?</b>. No orçamento, o valor final continua livre para mudar.</p>
+    ${priceGroupHTML(p, disabled, {name:'Mão de obra por hora', help:'Jardineiro em campo. Ex: 4 horas × R$ 55 = R$ 220.', where:'Dica Quanto cobrar? → Por hora.', unit:'R$/hora', ideal:'horaIdeal', min:'horaMin', max:'horaMax'})}
+    ${priceGroupHTML(p, disabled, {name:'Replantio de orquídea', help:'Por vaso, com substrato.', where:'Dica Quanto cobrar? → Orquídeas. Catálogo também tem o item, com preço próprio.', unit:'R$/vaso', ideal:'vasoIdeal', min:'vasoMin', max:'vasoMax'})}
+    ${priceGroupHTML(p, disabled, {name:'Visita ao orquidário', help:'Manutenção pontual: limpeza, adubo e fitossanitário.', where:'Dica Quanto cobrar? quando o serviço não é m² nem hora (usa também a margem).', unit:'R$/visita', ideal:'visitaOrqIdeal', min:'visitaOrqMin', max:'visitaOrqMax'})}
+    ${priceGroupHTML(p, disabled, {name:'Orquidário completo', help:'Projeto fechado (estrutura, tela, vasos iniciais).', where:'Dica Quanto cobrar? → Orquidário.', unit:'R$', ideal:'orquidarioIdeal', min:'orquidarioMin', max:'orquidarioMax'})}
     <div class="price-group">
-      <b>Mão de obra por hora</b>
-      <p class="price-help">Jardineiro em campo. Ex: 4 horas × R$ 55 = R$ 220.</p>
+      <b>Ajustes da dica (tudo editável)</b>
+      <p class="price-help">Multiplicam a sugestão em Quanto cobrar?. 1 = preço cheio. 1,2 = 20% a mais. Não mudam um orçamento já feito.</p>
+      <p class="price-where">Só a dica. O valor do orçamento continua editável na hora.</p>
       <div class="price-trio">
-        <label>Piso R$/hora<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-horaMin" class="maya-input" value="${esc(p.horaMin)}"></label>
-        <label>Você cobra R$/hora<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-horaIdeal" class="maya-input" value="${esc(p.horaIdeal)}"></label>
-        <label>Teto R$/hora<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-horaMax" class="maya-input" value="${esc(p.horaMax)}"></label>
+        <label>Essencial (×)<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-cxSimples" class="maya-input" value="${esc(p.cxSimples)}"></label>
+        <label>Padrão (×)<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-cxMedio" class="maya-input" value="${esc(p.cxMedio)}"></label>
+        <label>Premium (×)<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-cxPremium" class="maya-input" value="${esc(p.cxPremium)}"></label>
       </div>
-    </div>
-    <div class="price-group">
-      <b>Replantio de orquídea</b>
-      <p class="price-help">Por vaso, com substrato.</p>
-      <div class="price-trio">
-        <label>Piso R$/vaso<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-vasoMin" class="maya-input" value="${esc(p.vasoMin)}"></label>
-        <label>Você cobra R$/vaso<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-vasoIdeal" class="maya-input" value="${esc(p.vasoIdeal)}"></label>
-        <label>Teto R$/vaso<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-vasoMax" class="maya-input" value="${esc(p.vasoMax)}"></label>
+      <div class="price-trio mt-2">
+        <label>Quinzenal (×)<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-freqQuinzenalMult" class="maya-input" value="${esc(p.freqQuinzenalMult)}"></label>
+        <label>Semanal (×)<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-freqSemanalMult" class="maya-input" value="${esc(p.freqSemanalMult)}"></label>
+        <label>Desconto semanal %<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-freqSemanalDesc" class="maya-input" value="${esc(p.freqSemanalDesc)}"></label>
       </div>
-    </div>
-    <div class="price-group">
-      <b>Visita ao orquidário</b>
-      <p class="price-help">Manutenção pontual: limpeza, adubo e fitossanitário.</p>
-      <div class="price-trio">
-        <label>Piso R$/visita<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-visitaOrqMin" class="maya-input" value="${esc(p.visitaOrqMin)}"></label>
-        <label>Você cobra R$/visita<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-visitaOrqIdeal" class="maya-input" value="${esc(p.visitaOrqIdeal)}"></label>
-        <label>Teto R$/visita<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-visitaOrqMax" class="maya-input" value="${esc(p.visitaOrqMax)}"></label>
-      </div>
-    </div>
-    <div class="price-group">
-      <b>Orquidário completo</b>
-      <p class="price-help">Projeto fechado (estrutura, tela, vasos iniciais).</p>
-      <div class="price-trio">
-        <label>Piso R$<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-orquidarioMin" class="maya-input" value="${esc(p.orquidarioMin)}"></label>
-        <label>Você cobra R$<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-orquidarioIdeal" class="maya-input" value="${esc(p.orquidarioIdeal)}"></label>
-        <label>Teto R$<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-orquidarioMax" class="maya-input" value="${esc(p.orquidarioMax)}"></label>
-      </div>
-    </div>
-    <div class="price-group">
-      <b>Margem da empresa</b>
-      <p class="price-help">Percentual em cima do custo quando a dica não usa m² nem hora. 30 = 30%.</p>
-      <label class="font-bold">Margem %<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-marginPct" class="maya-input" value="${esc(p.marginPct)}"></label>
+      <label class="font-bold mt-2">Margem %<input ${disabled} type="text" inputmode="decimal" enterkeyhint="done" id="p-marginPct" class="maya-input" value="${esc(p.marginPct)}"></label>
+      <p class="price-help">Em cima do custo quando a dica não usa m² nem hora. 0 = sem margem. 30 = 30%.</p>
     </div>
     <button ${disabled} class="maya-btn mt-3 w-full" onclick="savePricing()">Salvar esses preços</button>
     ${write?`<details class="more-opts mt-3"><summary>Zona de perigo</summary>
@@ -1296,17 +1288,23 @@ window.savePricing=()=>{
   if(!window.MayaAuth?.canWrite?.()){ toast('Acesso somente para visualização.'); return; }
   const p=Store.pricing;
   const fields=$$('[id^="p-"]');
+  const pctKeys=new Set(['marginPct','freqSemanalDesc']);
+  const multKeys=new Set(['cxSimples','cxMedio','cxPremium','freqQuinzenalMult','freqSemanalMult']);
   for(const input of fields){
     const value=numBR(input.value);
     const key=input.id.slice(2);
-    if(key==='marginPct'){
-      if(!(value>=0) || value>100){ toast('Informe uma margem entre 0 e 100.'); input.focus(); return; }
+    if(pctKeys.has(key)){
+      if(!(value>=0) || value>100){ toast('Informe um percentual entre 0 e 100.'); input.focus(); return; }
+    }else if(multKeys.has(key)){
+      if(!(value>0) || value>20){ toast('Informe um multiplicador maior que zero.'); input.focus(); return; }
     }else if(!(value>0) || value>Number.MAX_SAFE_INTEGER/100){
       toast('Informe um preço válido, maior que zero.'); input.focus(); return;
     }
     p[key]=value;
   }
-  for(const prefix of ['m2Manut','m2Impl','projetoM2']){
+  if(Number(p.m2GramaIdeal)>0) p.m2Grama=p.m2GramaIdeal;
+  if(Number(p.m2IrrigacaoIdeal)>0) p.m2Irrigacao=p.m2IrrigacaoIdeal;
+  for(const prefix of ['m2Manut','m2Impl','projetoM2','m2Grama','m2Irrigacao']){
     if(p[prefix+'Min']>p[prefix+'Ideal'] || p[prefix+'Ideal']>p[prefix+'Max']){
       toast('O preço deve ficar entre o piso e o teto. Confira os três valores.');
       $('#p-'+prefix+'Ideal')?.focus(); return;

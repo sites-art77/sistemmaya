@@ -2,18 +2,24 @@
 function getPricing(){ return Store.pricing; }
 
 function cxMult(complexidade, p){
-  if(complexidade==='medio') return p.cxMedio;
-  if(complexidade==='premium') return p.cxPremium;
-  return p.cxSimples;
+  if(complexidade==='medio') return Number(p.cxMedio||1.2);
+  if(complexidade==='premium') return Number(p.cxPremium||1.45);
+  return Number(p.cxSimples||1);
 }
 function freqMult(freq, p){
-  if(freq==='quinzenal') return p.freqQuinzenalMult;
-  if(freq==='semanal') return p.freqSemanalMult;
+  if(freq==='quinzenal') return Number(p.freqQuinzenalMult||1.7);
+  if(freq==='semanal') return Number(p.freqSemanalMult||3.5);
   return 1;
+}
+function rateOf(p, key, alias, fallback){
+  const v=Number(p[key]);
+  if(Number.isFinite(v) && v>0) return v;
+  if(alias){ const a=Number(p[alias]); if(Number.isFinite(a) && a>0) return a; }
+  return Number(fallback)||0;
 }
 
 /* Entrada: {tipo, area, horas, qtd, freq, complexidade, insumos, desloc}
-   Tipos: manutencao_m2 | implantacao_m2 | hora | vaso | orquidario | projeto_m2 | plantio_un | visita */
+   Tipos: manutencao_m2 | implantacao_m2 | grama_m2 | irrigacao_m2 | hora | vaso | orquidario | projeto_m2 | visita */
 function sugerirPreco(inp){
   const p = getPricing();
   const cx = cxMult(inp.complexidade||'simples', p);
@@ -31,11 +37,29 @@ function sugerirPreco(inp){
   switch(inp.tipo){
     case 'manutencao_m2':{
       const a = Number(inp.area||0);
-      baseMin = a*Number(p.m2ManutMin); baseIdeal = a*Number(p.m2ManutIdeal); baseMax = a*Number(p.m2ManutMax);
+      baseMin = a*rateOf(p,'m2ManutMin',null,4); baseIdeal = a*rateOf(p,'m2ManutIdeal',null,6.5); baseMax = a*rateOf(p,'m2ManutMax',null,12);
       baseMin*=cx; baseIdeal*=cx; baseMax*=cx;
       baseMin*=fq; baseIdeal*=fq; baseMax*=fq;
       if(inp.freq==='semanal'){ const d=Number(p.freqSemanalDesc||0)/100; baseMin*=(1-d); baseIdeal*=(1-d); baseMax*=(1-d); }
-      memoria = `${a}m² × R$/m² (${p.m2ManutMin}/${p.m2ManutIdeal}/${p.m2ManutMax}) × complexidade ${cx} × freq ${fq}`;
+      memoria = `${a}m² manutenção × R$/m² × padrão ${cx} × freq ${fq}`;
+      break;
+    }
+    case 'grama_m2':{
+      const a = Number(inp.area||0);
+      const ideal=rateOf(p,'m2GramaIdeal','m2Grama',8);
+      baseMin = a*rateOf(p,'m2GramaMin',null,ideal)*cx;
+      baseIdeal = a*ideal*cx;
+      baseMax = a*rateOf(p,'m2GramaMax',null,ideal)*cx;
+      memoria = `${a}m² corte de grama × ${ideal}/m² × padrão ${cx}`;
+      break;
+    }
+    case 'irrigacao_m2':{
+      const a = Number(inp.area||0);
+      const ideal=rateOf(p,'m2IrrigacaoIdeal','m2Irrigacao',30);
+      baseMin = a*rateOf(p,'m2IrrigacaoMin',null,ideal)*cx;
+      baseIdeal = a*ideal*cx;
+      baseMax = a*rateOf(p,'m2IrrigacaoMax',null,ideal)*cx;
+      memoria = `${a}m² irrigação × ${ideal}/m² × padrão ${cx}`;
       break;
     }
     case 'implantacao_m2':{

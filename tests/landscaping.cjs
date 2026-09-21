@@ -134,6 +134,13 @@ ok(tiny.ideal >= 2000, 'ideal de projeto >= 2000');
 ok(tiny.max >= 2000, 'teto de projeto pequeno não fica abaixo de 2000');
 ok(tiny.max >= tiny.ideal && tiny.ideal >= tiny.min, 'faixa ordenada min<=ideal<=max');
 
+const grama = ctx.sugerirPreco({ tipo:'grama_m2', area:80, desloc:0, insumos:0, complexidade:'simples' });
+eq(grama.ideal, 640, '80 m² de grama × R$ 8');
+const irrig = ctx.sugerirPreco({ tipo:'irrigacao_m2', area:50, desloc:0, insumos:0, complexidade:'simples' });
+eq(irrig.ideal, 1500, '50 m² de irrigação × R$ 30');
+const premiumG = ctx.sugerirPreco({ tipo:'grama_m2', area:80, desloc:0, insumos:0, complexidade:'premium' });
+ok(premiumG.ideal > grama.ideal, 'premium aumenta corte de grama');
+
 const appCode = fs.readFileSync(path.join(root, 'app.js'), 'utf8') + `
 window.__setDraft = function(d){ Draft = d; };
 window.__getDraft = function(){ return Draft; };
@@ -215,6 +222,13 @@ ctx.Store.importBackup(backup);
 const restored = (ctx.Store.budgets||[]).find(b=>b.id===again.id);
 eq(restored.landscaping.area, 100, 'restore preserva paisagismo');
 eq(restored.serviceValue, 4000);
+
+field('f-m2tipo','grama');
+field('f-m2area','80');
+field('f-m2rate','8');
+ctx.applyM2();
+eq(ctx.__getDraft().serviceValue, 640, 'corte de grama 80 m² × 8');
+ok(String(ctx.__getDraft().serviceText).includes('Corte de grama'), 'linha de grama na descrição');
 
 ['p-marginPct','p-horaMin','p-horaIdeal','p-horaMax','p-m2ManutMin','p-m2ManutIdeal','p-m2ManutMax','p-m2ImplMin','p-m2ImplIdeal','p-m2ImplMax','p-projetoM2Min','p-projetoM2Ideal','p-projetoM2Max','p-vasoMin','p-vasoIdeal','p-vasoMax']
   .forEach(id => field(id, id==='p-marginPct' ? '0' : '10'));

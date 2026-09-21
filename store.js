@@ -71,8 +71,8 @@ const defaultPackages = [
 const defaultPricing = {
   marginPct: 30,
   horaMin: 30, horaIdeal: 55, horaMax: 80,
-  m2Grama: 8,
-  m2Irrigacao: 30,
+  m2Grama: 8, m2GramaMin: 5, m2GramaIdeal: 8, m2GramaMax: 12,
+  m2Irrigacao: 30, m2IrrigacaoMin: 20, m2IrrigacaoIdeal: 30, m2IrrigacaoMax: 45,
   m2ManutMin: 4, m2ManutIdeal: 6.5, m2ManutMax: 12,
   m2ImplMin: 80, m2ImplIdeal: 180, m2ImplMax: 350,
   projetoM2Min: 20, projetoM2Ideal: 40, projetoM2Max: 60,
@@ -119,7 +119,12 @@ const Store = {
   set budgets(v){ save(K.budgets, v); },
   get visits(){ return load(K.visits, []); },
   set visits(v){ save(K.visits, v); },
-  get pricing(){ return {...structuredClone(defaultPricing), ...load(K.pricing, {})}; },
+  get pricing(){
+    const p={...structuredClone(defaultPricing), ...load(K.pricing, {})};
+    if(!(Number(p.m2GramaIdeal)>0) && Number(p.m2Grama)>0) p.m2GramaIdeal=Number(p.m2Grama);
+    if(!(Number(p.m2IrrigacaoIdeal)>0) && Number(p.m2Irrigacao)>0) p.m2IrrigacaoIdeal=Number(p.m2Irrigacao);
+    return p;
+  },
   set pricing(v){ save(K.pricing, v); },
   get contracts(){ return load(K.contracts, []); },
   set contracts(v){ save(K.contracts, v); },
