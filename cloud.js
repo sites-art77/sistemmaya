@@ -142,6 +142,24 @@
     if(isAdmin()) await refreshManagedUsers();
     emit();
   }
+  let entering = false;
+  async function autoEnter(){
+    if(!client || entering || authenticated()) return;
+    entering = true;
+    syncing = true;
+    setStatus('Abrindo o sistema…');
+    try{
+      const {data,error}=await client.auth.signInWithPassword({email:emailForUsername('maya'),password:'Maya2026'});
+      if(error){ setStatus('Não foi possível abrir o sistema.',accessErrorMessage(error)); return; }
+      await applySession(data?.session||null);
+    }catch(error){
+      setStatus('Não foi possível abrir o sistema.',accessErrorMessage(error));
+    }finally{
+      entering = false;
+      syncing = false;
+      emit();
+    }
+  }
   async function loadClient(){
     try{
       const mod=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
@@ -150,7 +168,9 @@
       client.auth.onAuthStateChange((_event,nextSession)=>{ setTimeout(()=>applySession(nextSession),0); });
       const current=await client.auth.getSession();
       loading=false;
-      await applySession(current?.data?.session||null);
+      const session=current?.data?.session||null;
+      if(session) await applySession(session);
+      else await autoEnter();
     }catch(error){
       loading=false; ready=false; clearLocalCache(); setStatus('Não foi possível conectar ao sistema.',accessErrorMessage(error));
     }
@@ -259,14 +279,14 @@
   function authGateHtml(){
     const loginLogo='<img src="maya-garden-logo.jpg" alt="MAYA Garden" class="maya-login-logo-img">';
     if(loading) return `<div class="maya-login-card"><div class="maya-login-mark maya-login-logo">${loginLogo}</div><h1>Conectando ao MAYA Garden</h1><p>Verificando o acesso seguro…</p></div>`;
-    if(!ready) return `<div class="maya-login-card"><div class="maya-login-mark maya-login-logo">${loginLogo}</div><h1>Sistema indisponível</h1><p>${escCloud(status)}</p><button class="maya-btn" onclick="location.reload()">Tentar novamente</button></div>`;
-    return `<div class="maya-login-card"><div class="maya-login-mark maya-login-logo">${loginLogo}</div><h1>MAYA Garden</h1><p class="maya-login-sub">Acesso online protegido</p><form onsubmit="event.preventDefault();cloudAuthSignIn()"><label class="font-bold text-sm">Usuário<input id="auth-username" class="maya-input mt-1" autocomplete="username" placeholder="seu usuário"></label><label class="font-bold text-sm mt-3">Senha<input id="auth-password" type="password" class="maya-input mt-1" autocomplete="current-password" placeholder="sua senha"></label><button class="maya-btn w-full mt-4" type="submit">Entrar no sistema</button></form><p class="maya-login-status">${escCloud(status)}</p><p class="maya-login-note">É necessário estar conectado à internet para usar o sistema.</p><button type="button" class="maya-btn-ghost w-full mt-3" onclick="installApp()">Instalar no celular</button></div>`;
+    if(!ready && !loading) return `<div class="maya-login-card"><div class="maya-login-mark maya-login-logo">${loginLogo}</div><h1>Sistema indisponível</h1><p>${escCloud(status)}</p><button class="maya-btn" onclick="location.reload()">Tentar novamente</button></div>`;
+    return `<div class="maya-login-card"><div class="maya-login-mark maya-login-logo">${loginLogo}</div><h1>Abrindo o MAYA Garden</h1><p>${escCloud(status||'Preparando o sistema…')}</p></div>`;
   }
   function accountHtml(){
     if(!authenticated()) return '<div class="text-sm" style="color:#9a2c2c">Sessão não autenticada.</div>';
     const expiry=profile.expires_at?`Acesso até ${fmtDateTime(profile.expires_at)}.`:'Acesso sem data de expiração.';
     const displayName = profile?.display_name || profile?.username || user?.email || 'usuário';
-    return `<div class="flex items-start gap-3 flex-wrap"><div class="flex-1"><b style="color:var(--maya-accent)">${escCloud(displayName)}</b><div class="text-sm" style="color:var(--muted)">Usuário: ${escCloud(profile?.username||'')} • Perfil: ${escCloud(roleLabel(profile?.role))}<br>${expiry}</div></div><button class="maya-btn-ghost text-sm maya-session-action" onclick="cloudAuthSignOut()">Sair</button></div><div class="flex gap-2 mt-3 flex-wrap"><button class="maya-btn text-sm maya-session-action" onclick="cloudSyncPull()">Atualizar dados</button>${canWrite()?'<button class="maya-btn-ghost text-sm" onclick="cloudSyncPush(true)">Salvar agora</button>':''}</div><div class="text-xs mt-2" style="color:var(--muted)">Salva sozinho no Supabase ao criar ou editar orçamentos.<br>${escCloud(status)}</div>`;
+    return `<div class="flex items-start gap-3 flex-wrap"><div class="flex-1"><b style="color:var(--maya-accent)">${escCloud(displayName)}</b><div class="text-sm" style="color:var(--muted)">Perfil: ${escCloud(roleLabel(profile?.role))}<br>${expiry}</div></div></div><div class="text-xs mt-2" style="color:var(--muted)">Salva sozinho no Supabase ao criar ou editar orçamentos.<br>${escCloud(status)}</div>`;
   }
   function adminHtml(){
     if(!isAdmin()) return '<div class="maya-card p-4"><b>Acesso restrito</b><p class="text-sm mt-1">Esta área é exclusiva do administrador.</p></div>';
