@@ -66,6 +66,7 @@
   }
   function accessErrorMessage(error){
     const msg=String(error?.message||error||'');
+    if(/load failed|failed to fetch|networkerror|network request failed|err_name_not_resolved|name not resolved/i.test(msg)) return 'A nuvem não respondeu. O projeto Supabase está fora do ar.';
     if(/invalid login credentials/i.test(msg)) return 'Usuário ou senha inválidos.';
     if(/password.*(6|characters|length)/i.test(msg)) return 'O Supabase exige senha com pelo menos 6 caracteres.';
     if(/row-level|permission|not authorized/i.test(msg)) return 'Sua conta não tem permissão para esta operação.';
