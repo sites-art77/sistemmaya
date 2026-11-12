@@ -1,7 +1,7 @@
 /* MAYA Garden — acesso online, perfis e dados compartilhados no Supabase */
 (function(){
-  const SUPABASE_URL = 'https://sndhrndcyqefxwgsdlgi.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_9mHmO8wjFK4qSauBWIvRMQ_aHSeS-fj';
+  const SUPABASE_URL = 'https://pdwkbvbabaoyuimhoktb.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_2j4Mids-AiuspF7jZtyh6g_DZePYqkw';
   const ACCESS_TABLE = 'maya_user_access';
   const DATA_TABLE = 'maya_workspace_data';
   const WORKSPACE_ID = 'maya-garden-main';
@@ -68,6 +68,7 @@
     const msg=String(error?.message||error||'');
     if(/load failed|failed to fetch|networkerror|network request failed|err_name_not_resolved|name not resolved/i.test(msg)) return 'A nuvem não respondeu. O projeto Supabase está fora do ar.';
     if(/invalid login credentials/i.test(msg)) return 'Usuário ou senha inválidos.';
+    if(/schema cache|PGRST205|Could not find the table/i.test(msg)) return 'A nuvem nova ainda está vazia. Falta rodar a preparação no Supabase.';
     if(/password.*(6|characters|length)/i.test(msg)) return 'O Supabase exige senha com pelo menos 6 caracteres.';
     if(/row-level|permission|not authorized/i.test(msg)) return 'Sua conta não tem permissão para esta operação.';
     return msg||'Não foi possível concluir a operação.';
@@ -75,8 +76,20 @@
 
   async function loadProfile(nextUser){
     if(!nextUser) return {data:null,error:null};
-    const result = await client.from(ACCESS_TABLE).select('user_id,username,display_name,role,active,expires_at,created_at,updated_at').eq('user_id',nextUser.id).maybeSingle();
-    return result;
+    return client.from(ACCESS_TABLE).select('user_id,username,display_name,role,active,expires_at,created_at,updated_at').eq('user_id',nextUser.id).maybeSingle();
+  }
+  async function ensureProfile(nextUser){
+    const result = await loadProfile(nextUser);
+    if(result.error || result.data) return result;
+    const email = String(nextUser.email||'');
+    const username = normalizeUsername(email.split('@')[0]) || 'maya';
+    return client.from(ACCESS_TABLE).insert({
+      user_id: nextUser.id,
+      username,
+      display_name: 'Maya',
+      role: 'admin',
+      active: true
+    }).select('user_id,username,display_name,role,active,expires_at,created_at,updated_at').single();
   }
   async function loadWorkspace(version){
     if(version !== undefined && version !== sessionVersion) return {ok:false,stale:true};
@@ -104,7 +117,7 @@
     profile=null;
     remoteUpdatedAt='';
     if(!user){ clearLocalCache(); setStatus(ready?'Faça login para acessar o sistema.':'Conectando ao sistema…'); emit(); return; }
-    const result=await loadProfile(user);
+    const result=await ensureProfile(user);
     if(version !== sessionVersion) return;
     if(result.error || !result.data){
       clearLocalCache();
